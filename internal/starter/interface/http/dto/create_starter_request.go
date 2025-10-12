@@ -1,0 +1,12 @@
+package dto
+
+type CreateStarterRequest struct {
+	Domain        string `json:"domain" binding:"required,min=3,max=25"`
+	Name          string `json:"name" binding:"required,min=2,max=255"`
+	Email         string `json:"email" binding:"required,omitempty,email,max=100"`
+	Mobile        string `json:"mobile" binding:"required,min=10,max=20"`
+	WorkPhone     string `json:"work_phone" binding:"omitempty,max=20"`
+	JobTitle      string `json:"job_title" binding:"required,min=2,max=100"`
+	DepartmentID  *int64 `json:"department_id" binding:"required,omitempty,gt=0"`
+	LineManagerID *int64 `json:"line_manager_id" binding:"omitempty,gt=0"`
+}
