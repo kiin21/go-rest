@@ -12,7 +12,6 @@ import (
 func main() {
 	r, port := initialize.Run()
 
-	docs.SwaggerInfo.Host = "localhost:" + port
 	docs.SwaggerInfo.Schemes = []string{"http"}
 
 	r.Run(":" + port)

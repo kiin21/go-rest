@@ -1,6 +1,10 @@
 package domain
 
-import "time"
+import (
+	"time"
+
+	shareddomain "github.com/kiin21/go-rest/internal/shared/domain"
+)
 
 type Department struct {
 	ID                int64
@@ -18,18 +22,14 @@ type DepartmentWithDetails struct {
 	*Department
 	BusinessUnit        *BusinessUnit
 	Leader              *Leader
-	ParentDepartment    *DepartmentNested
-	Subdepartments      []*DepartmentNested
+	ParentDepartment    *shareddomain.OrgDepartmentNested
+	Subdepartments      []*shareddomain.OrgDepartmentNested
 	MembersCount        int
 	SubdepartmentsCount int
 }
 
-type DepartmentNested struct {
-	ID           int64
-	FullName     string
-	Shortname    string
-	MembersCount int
-}
+// Type alias for backward compatibility
+type DepartmentNested = shareddomain.OrgDepartmentNested
 
 type Leader struct {
 	ID       int64
@@ -38,4 +38,3 @@ type Leader struct {
 	Email    string
 	JobTitle string
 }
-

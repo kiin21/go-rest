@@ -3,41 +3,16 @@ package dto
 import (
 	"time"
 
+	shareddto "github.com/kiin21/go-rest/internal/shared/dto"
 	"github.com/kiin21/go-rest/internal/starter/domain"
 )
 
-// DepartmentNested represents department information in response
-type DepartmentNested struct {
-	ID              int64                  `json:"id"`
-	Name            string                 `json:"name"`
-	Shortname       string                 `json:"shortname"`
-	GroupDepartment *GroupDepartmentNested `json:"group_department,omitempty"`
-}
+// Use shared types
+type DepartmentNested = shareddto.DepartmentNested
+type GroupDepartmentNested = shareddto.GroupDepartmentNested
+type LineManagerNested = shareddto.LineManagerNested
+type BusinessUnitNested = shareddto.BusinessUnitNested
 
-// GroupDepartmentNested represents parent department
-type GroupDepartmentNested struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	Shortname string `json:"shortname"`
-}
-
-// LineManagerNested represents line manager information
-type LineManagerNested struct {
-	ID       int64  `json:"id"`
-	Domain   string `json:"domain"`
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	JobTitle string `json:"job_title"`
-}
-
-// BusinessUnitNested represents business unit information
-type BusinessUnitNested struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	Shortname string `json:"shortname"`
-}
-
-// StarterResponse represents a starter with nested related data
 type StarterResponse struct {
 	ID           int64               `json:"id"`
 	Domain       string              `json:"domain"`

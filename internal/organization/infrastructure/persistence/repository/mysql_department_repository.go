@@ -396,7 +396,6 @@ func (r *MySQLDepartmentRepository) FindByIDsWithRelations(ctx context.Context, 
 	return relations, nil
 }
 
-// Create inserts a new department
 func (r *MySQLDepartmentRepository) Create(ctx context.Context, department *domain.Department) error {
 	_model := &model.DepartmentModel{
 		GroupDepartmentID: department.GroupDepartmentID,
@@ -410,7 +409,6 @@ func (r *MySQLDepartmentRepository) Create(ctx context.Context, department *doma
 		return err
 	}
 
-	// Update the domain entity with the generated ID and timestamps
 	department.ID = _model.ID
 	department.CreatedAt = _model.CreatedAt
 	department.UpdatedAt = _model.UpdatedAt
@@ -418,7 +416,6 @@ func (r *MySQLDepartmentRepository) Create(ctx context.Context, department *doma
 	return nil
 }
 
-// Update updates an existing department
 func (r *MySQLDepartmentRepository) Update(ctx context.Context, department *domain.Department) error {
 	model := &model.DepartmentModel{
 		ID:                department.ID,
@@ -438,7 +435,6 @@ func (r *MySQLDepartmentRepository) Update(ctx context.Context, department *doma
 	return nil
 }
 
-// toDomain converts model.DepartmentModel to domain.Department
 func (r *MySQLDepartmentRepository) toDomain(model *model.DepartmentModel) *domain.Department {
 	return &domain.Department{
 		ID:                model.ID,

@@ -1,19 +1,27 @@
 package model
 
-import "time"
+import (
+	"time"
 
-// BusinessUnitModel is the GORM model for business_units table
+	sharedModel "github.com/kiin21/go-rest/internal/shared/infrastructure/persistence/model"
+	"gorm.io/gorm"
+)
+
 type BusinessUnitModel struct {
-	ID        int64     `gorm:"column:id;primaryKey"`
-	Name      string    `gorm:"column:name"`
-	Shortname string    `gorm:"column:shortname"`
-	CompanyID int64     `gorm:"column:company_id"`
-	LeaderID  *int64    `gorm:"column:leader_id"`
-	CreatedAt time.Time `gorm:"column:created_at"`
-	UpdatedAt time.Time `gorm:"column:updated_at"`
+	ID        int64          `gorm:"column:id;primaryKey;autoIncrement"`
+	Name      string         `gorm:"column:name;not null"`
+	Shortname string         `gorm:"column:shortname;not null"`
+	CompanyID int64          `gorm:"column:company_id;not null"`
+	LeaderID  *int64         `gorm:"column:leader_id"`
+	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at;index"`
+	CreatedAt time.Time      `gorm:"column:created_at;autoCreateTime"`
+	UpdatedAt time.Time      `gorm:"column:updated_at;autoUpdateTime"`
+
+	// Relationships
+	Company *CompanyModel             `gorm:"foreignKey:CompanyID"`
+	Leader  *sharedModel.StarterModel `gorm:"foreignKey:LeaderID"`
 }
 
-// TableName specifies table name
 func (BusinessUnitModel) TableName() string {
 	return "business_units"
 }

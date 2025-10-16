@@ -5,13 +5,11 @@ import (
 	"fmt"
 )
 
-// LeaderInfo represents the leader information in the request
 type LeaderInfo struct {
 	ID     *int64  `json:"id" binding:"omitempty,gt=0"`
 	Domain *string `json:"domain" binding:"omitempty,min=1"`
 }
 
-// AssignLeaderRequest represents the HTTP request for assigning a leader to a department
 type AssignLeaderRequest struct {
 	Leader LeaderInfo `json:"leader" binding:"required"`
 }
@@ -32,7 +30,6 @@ func (r *AssignLeaderRequest) Validate() error {
 	return nil
 }
 
-// GetLeaderIdentifier returns the leader identifier and its type
 func (r *AssignLeaderRequest) GetLeaderIdentifier() (interface{}, string, error) {
 	if err := r.Validate(); err != nil {
 		return nil, "", err

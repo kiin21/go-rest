@@ -4,27 +4,26 @@ import (
 	"context"
 
 	"github.com/kiin21/go-rest/internal/organization/domain"
+	"github.com/kiin21/go-rest/internal/organization/infrastructure/persistence/model"
 	"github.com/kiin21/go-rest/pkg/response"
 	"gorm.io/gorm"
 )
 
-// MySQLBusinessUnitRepository implements BusinessUnitRepository
 type MySQLBusinessUnitRepository struct {
 	db *gorm.DB
 }
 
-// NewMySQLBusinessUnitRepository creates repository
 func NewMySQLBusinessUnitRepository(db *gorm.DB) domain.BusinessUnitRepository {
 	return &MySQLBusinessUnitRepository{db: db}
 }
 
 // FindByID retrieves business unit by ID
 func (r *MySQLBusinessUnitRepository) FindByID(ctx context.Context, id int64) (*domain.BusinessUnit, error) {
-	var _model BusinessUnitModel
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&_model).Error; err != nil {
+	var model model.BusinessUnitModel
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&model).Error; err != nil {
 		return nil, err
 	}
-	return r.toDomain(&_model), nil
+	return r.toDomain(&model), nil
 }
 
 // FindByIDs batch retrieves business units
@@ -33,24 +32,24 @@ func (r *MySQLBusinessUnitRepository) FindByIDs(ctx context.Context, ids []int64
 		return []*domain.BusinessUnit{}, nil
 	}
 
-	var models []BusinessUnitModel
+	var models []model.BusinessUnitModel
 	if err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&models).Error; err != nil {
 		return nil, err
 	}
 
-	units := make([]*domain.BusinessUnit, len(models))
+	domains := make([]*domain.BusinessUnit, len(models))
 	for i, m := range models {
-		units[i] = r.toDomain(&m)
+		domains[i] = r.toDomain(&m)
 	}
-	return units, nil
+	return domains, nil
 }
 
 // List retrieves business units with pagination support
 func (r *MySQLBusinessUnitRepository) List(ctx context.Context, pg response.ReqPagination) ([]*domain.BusinessUnit, int64, error) {
-	var models []BusinessUnitModel
+	var models []model.BusinessUnitModel
 	var total int64
 
-	query := r.db.WithContext(ctx).Model(&BusinessUnitModel{})
+	query := r.db.WithContext(ctx).Model(&model.BusinessUnitModel{})
 
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -74,7 +73,7 @@ func (r *MySQLBusinessUnitRepository) List(ctx context.Context, pg response.ReqP
 }
 
 // toDomain converts model to domain
-func (r *MySQLBusinessUnitRepository) toDomain(m *BusinessUnitModel) *domain.BusinessUnit {
+func (r *MySQLBusinessUnitRepository) toDomain(m *model.BusinessUnitModel) *domain.BusinessUnit {
 	return &domain.BusinessUnit{
 		ID:        m.ID,
 		Name:      m.Name,
@@ -88,7 +87,7 @@ func (r *MySQLBusinessUnitRepository) toDomain(m *BusinessUnitModel) *domain.Bus
 
 // FindByIDWithDetails retrieves a business unit with its company and leader details.
 func (r *MySQLBusinessUnitRepository) FindByIDWithDetails(ctx context.Context, id int64) (*domain.BusinessUnitWithDetails, error) {
-	var _model BusinessUnitModel
+	var _model model.BusinessUnitModel
 	if err := r.db.WithContext(ctx).Preload("Company").Preload("Leader").First(&_model, id).Error; err != nil {
 		return nil, err
 	}
@@ -97,10 +96,10 @@ func (r *MySQLBusinessUnitRepository) FindByIDWithDetails(ctx context.Context, i
 
 // ListWithDetails retrieves a paginated list of business units with their company and leader details.
 func (r *MySQLBusinessUnitRepository) ListWithDetails(ctx context.Context, pg response.ReqPagination) ([]*domain.BusinessUnitWithDetails, int64, error) {
-	var models []BusinessUnitModel
+	var models []model.BusinessUnitModel
 	var total int64
 
-	query := r.db.WithContext(ctx).Model(&BusinessUnitModel{})
+	query := r.db.WithContext(ctx).Model(&model.BusinessUnitModel{})
 
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -124,7 +123,7 @@ func (r *MySQLBusinessUnitRepository) ListWithDetails(ctx context.Context, pg re
 }
 
 // toDomainWithDetails converts model to domain with details.
-func (r *MySQLBusinessUnitRepository) toDomainWithDetails(m *BusinessUnitModel) *domain.BusinessUnitWithDetails {
+func (r *MySQLBusinessUnitRepository) toDomainWithDetails(m *model.BusinessUnitModel) *domain.BusinessUnitWithDetails {
 	bu := &domain.BusinessUnitWithDetails{
 		BusinessUnit: r.toDomain(m), // Reuse existing converter
 	}

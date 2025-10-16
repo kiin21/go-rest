@@ -20,10 +20,12 @@ type DepartmentDetailResponse struct {
 	UpdatedAt           time.Time           `json:"updated_at"`
 }
 
+// DepartmentNested represents a nested department object in a response.
 type DepartmentNested struct {
-	ID        int64  `json:"id"`
-	FullName  string `json:"full_name"`
-	Shortname string `json:"shortname"`
+	ID           int64  `json:"id"`
+	FullName     string `json:"full_name"`
+	Shortname    string `json:"shortname"`
+	MembersCount int    `json:"members_count"`
 }
 
 func FromDomainWithDetails(dept *domain.DepartmentWithDetails) *DepartmentDetailResponse {

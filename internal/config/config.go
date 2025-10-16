@@ -6,10 +6,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Config stores all configuration of the application.
-// The values are read by viper from a config file or environment variable.
+// Manage config with Viper
 type Config struct {
-	// AppEnv        string `mapstructure:"APP_ENV"`
+	// App config
 	DBHost     string `mapstructure:"DB_HOST"`
 	DBPort     string `mapstructure:"DB_PORT"`
 	DBUser     string `mapstructure:"DB_USER"`
@@ -33,7 +32,6 @@ type Config struct {
 	// ServerAddress string `mapstructure:"SERVER_ADDRESS"`
 }
 
-// LoadConfig reads configuration from a specific .env file.
 func LoadConfig() (config Config, err error) {
 	viper.SetConfigFile(".env_dev")
 	viper.SetConfigType("env")
