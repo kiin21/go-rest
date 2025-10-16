@@ -31,14 +31,9 @@ func (r *MySQLDepartmentRepository) List(ctx context.Context, filter domain.Depa
 
 	// Apply filters
 	if filter.BusinessUnitID != nil {
-		if filter.IncludeSubdepartments {
-			// Find all departments in the business unit including subdepartments
-			query = query.Where("business_unit_id = ? OR group_department_id IN (SELECT id FROM departments WHERE business_unit_id = ? AND deleted_at IS NULL)",
-				*filter.BusinessUnitID, *filter.BusinessUnitID)
-		} else {
-			// Only direct departments
-			query = query.Where("business_unit_id = ?", *filter.BusinessUnitID)
-		}
+		// Only direct departments
+		query = query.Where("business_unit_id = ?", *filter.BusinessUnitID)
+
 	}
 
 	// Count total matching records
@@ -60,8 +55,8 @@ func (r *MySQLDepartmentRepository) List(ctx context.Context, filter domain.Depa
 
 	// Convert to domain entities
 	departments := make([]*domain.Department, len(models))
-	for i, model := range models {
-		departments[i] = r.toDomain(&model)
+	for i, _model := range models {
+		departments[i] = r.toDomain(&_model)
 	}
 
 	return departments, total, nil
@@ -93,12 +88,7 @@ func (r *MySQLDepartmentRepository) ListWithDetails(ctx context.Context, filter 
 
 	// Apply filters
 	if filter.BusinessUnitID != nil {
-		if filter.IncludeSubdepartments {
-			query = query.Where("business_unit_id = ? OR group_department_id IN (SELECT id FROM departments WHERE business_unit_id = ? AND deleted_at IS NULL)",
-				*filter.BusinessUnitID, *filter.BusinessUnitID)
-		} else {
-			query = query.Where("business_unit_id = ?", *filter.BusinessUnitID)
-		}
+		query = query.Where("business_unit_id = ?", *filter.BusinessUnitID)
 	}
 
 	// Count total
@@ -281,23 +271,12 @@ func (r *MySQLDepartmentRepository) ListWithDetails(ctx context.Context, filter 
 	return results, total, nil
 }
 
-// FindByID retrieves a department by its ID
-func (r *MySQLDepartmentRepository) FindByID(ctx context.Context, id int64) (*domain.Department, error) {
-	var model model.DepartmentModel
-
-	if err := r.db.WithContext(ctx).
-		Where("id = ? AND deleted_at IS NULL", id).
-		First(&model).Error; err != nil {
-		return nil, err
-	}
-
-	return r.toDomain(&model), nil
-}
-
 // FindByIDsWithRelations retrieves departments with group_department and business_unit using view
-func (r *MySQLDepartmentRepository) FindByIDsWithRelations(ctx context.Context, ids []int64) ([]*domain.DepartmentWithRelations, error) {
+//
+//goland:noinspection DuplicatedCode
+func (r *MySQLDepartmentRepository) FindByIDsWithRelations(ctx context.Context, ids []int64) ([]*domain.DepartmentWithDetails, error) {
 	if len(ids) == 0 {
-		return []*domain.DepartmentWithRelations{}, nil
+		return []*domain.DepartmentWithDetails{}, nil
 	}
 
 	// Query from view with resolved business_unit_id
@@ -380,9 +359,9 @@ func (r *MySQLDepartmentRepository) FindByIDsWithRelations(ctx context.Context, 
 	}
 
 	// Build final result
-	relations := make([]*domain.DepartmentWithRelations, 0, len(viewResults))
+	relations := make([]*domain.DepartmentWithDetails, 0, len(viewResults))
 	for _, vr := range viewResults {
-		rel := &domain.DepartmentWithRelations{
+		rel := &domain.DepartmentWithDetails{
 			Department: &domain.Department{
 				ID:                vr.ID,
 				FullName:          vr.FullName,
@@ -395,7 +374,12 @@ func (r *MySQLDepartmentRepository) FindByIDsWithRelations(ctx context.Context, 
 		// Add group department if exists
 		if vr.GroupDepartmentID != nil {
 			if gd, ok := groupDeptMap[*vr.GroupDepartmentID]; ok {
-				rel.GroupDepartment = gd
+				rel.ParentDepartment = &domain.DepartmentNested{
+					ID:           gd.ID,
+					FullName:     gd.FullName,
+					Shortname:    gd.Shortname,
+					MembersCount: 2107,
+				}
 			}
 		}
 
@@ -414,7 +398,7 @@ func (r *MySQLDepartmentRepository) FindByIDsWithRelations(ctx context.Context, 
 
 // Create inserts a new department
 func (r *MySQLDepartmentRepository) Create(ctx context.Context, department *domain.Department) error {
-	model := &model.DepartmentModel{
+	_model := &model.DepartmentModel{
 		GroupDepartmentID: department.GroupDepartmentID,
 		FullName:          department.FullName,
 		Shortname:         department.Shortname,
@@ -422,14 +406,14 @@ func (r *MySQLDepartmentRepository) Create(ctx context.Context, department *doma
 		LeaderID:          department.LeaderID,
 	}
 
-	if err := r.db.WithContext(ctx).Create(model).Error; err != nil {
+	if err := r.db.WithContext(ctx).Create(_model).Error; err != nil {
 		return err
 	}
 
 	// Update the domain entity with the generated ID and timestamps
-	department.ID = model.ID
-	department.CreatedAt = model.CreatedAt
-	department.UpdatedAt = model.UpdatedAt
+	department.ID = _model.ID
+	department.CreatedAt = _model.CreatedAt
+	department.UpdatedAt = _model.UpdatedAt
 
 	return nil
 }

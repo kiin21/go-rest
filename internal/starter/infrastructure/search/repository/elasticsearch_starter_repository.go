@@ -207,8 +207,10 @@ func (r *ElasticsearchStarterRepository) BulkIndex(ctx context.Context, starters
 // Helper methods
 
 // buildSearchQuery builds Elasticsearch query DSL
-func (r *ElasticsearchStarterRepository) buildSearchQuery(query string, filter starterDomain.ListFilter) map[string]interface{} {
-	must := []interface{}{}
+func (r *ElasticsearchStarterRepository) buildSearchQuery(
+	query string, filter starterDomain.ListFilter,
+) map[string]interface{} {
+	var must []interface{}
 
 	// Text search across multiple fields with boosting
 	if query != "" {

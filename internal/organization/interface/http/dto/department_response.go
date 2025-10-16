@@ -37,12 +37,3 @@ func FromDepartment(dept *domain.Department) *DepartmentResponse {
 		DeletedAt:         dept.DeletedAt,
 	}
 }
-
-// FromDepartments converts multiple domain entities to response DTOs
-func FromDepartments(depts []*domain.Department) []*DepartmentResponse {
-	responses := make([]*DepartmentResponse, len(depts))
-	for i, dept := range depts {
-		responses[i] = FromDepartment(dept)
-	}
-	return responses
-}

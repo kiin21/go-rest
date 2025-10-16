@@ -5,7 +5,7 @@
 package main
 
 import (
-	docs "github.com/kiin21/go-rest/docs"
+	"github.com/kiin21/go-rest/docs"
 	"github.com/kiin21/go-rest/internal/initialize"
 )
 

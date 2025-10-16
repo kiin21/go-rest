@@ -11,8 +11,9 @@ import (
 func InitOrganization(db *gorm.DB) (*orgHttp.OrganizationHandler, orgDomain.DepartmentRepository, orgDomain.BusinessUnitRepository) {
 	departmentRepo := orgRepository.NewMySQLDepartmentRepository(db)
 	businessUnitRepo := orgRepository.NewMySQLBusinessUnitRepository(db)
-	organizationService := orgApplication.NewOrganizationApplicationService(departmentRepo)
-	organizationHandler := orgHttp.NewOrganizationHandler(organizationService)
+	departmentService := orgApplication.NewDepartmentApplicationService(departmentRepo)
+	businessUnitService := orgApplication.NewBusinessUnitApplicationService(businessUnitRepo)
+	organizationHandler := orgHttp.NewOrganizationHandler(departmentService, businessUnitService)
 
 	return organizationHandler, departmentRepo, businessUnitRepo
 }

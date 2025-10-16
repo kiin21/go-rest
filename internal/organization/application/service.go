@@ -2,6 +2,8 @@ package application
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strconv"
 
 	appDto "github.com/kiin21/go-rest/internal/organization/application/dto"
@@ -9,23 +11,22 @@ import (
 	"github.com/kiin21/go-rest/pkg/response"
 )
 
-// OrganizationApplicationService handles application-level business logic for organization entities.
-type OrganizationApplicationService struct {
+// DepartmentApplicationService handles application-level business logic for departments.
+type DepartmentApplicationService struct {
 	departmentRepo domain.DepartmentRepository
 }
 
-// NewOrganizationApplicationService creates a new application service.
-func NewOrganizationApplicationService(departmentRepo domain.DepartmentRepository) *OrganizationApplicationService {
-	return &OrganizationApplicationService{
+// NewDepartmentApplicationService creates a new application service.
+func NewDepartmentApplicationService(departmentRepo domain.DepartmentRepository) *DepartmentApplicationService {
+	return &DepartmentApplicationService{
 		departmentRepo: departmentRepo,
 	}
 }
 
 // GetAllDepartments returns a paginated list of departments with full details.
-func (s *OrganizationApplicationService) GetAllDepartments(ctx context.Context, query appDto.ListDepartmentsQuery) (*response.PaginatedResult[*domain.DepartmentWithDetails], error) {
+func (s *DepartmentApplicationService) GetAllDepartments(ctx context.Context, query appDto.ListDepartmentsQuery) (*response.PaginatedResult[*domain.DepartmentWithDetails], error) {
 	filter := domain.DepartmentListFilter{
-		BusinessUnitID:        query.BusinessUnitID,
-		IncludeSubdepartments: query.IncludeSubdepartments,
+		BusinessUnitID: query.BusinessUnitID,
 	}
 
 	departments, total, err := s.departmentRepo.ListWithDetails(ctx, filter, query.Pagination)
@@ -63,8 +64,24 @@ func (s *OrganizationApplicationService) GetAllDepartments(ctx context.Context, 
 	}, nil
 }
 
+// GetOneDepartment retrieves departments (by IDs) with their relations loaded.
+// It accepts a query that contains one or more department IDs and returns
+// a slice of DepartmentWithDetails from the repository.
+func (s *DepartmentApplicationService) GetOneDepartment(ctx context.Context, query appDto.GetDepartmentQuery) ([]*domain.DepartmentWithDetails, error) {
+	// Convert []int to []int64 for repository
+	ids := make([]int64, 0, 1)
+	ids = append(ids, *query.ID)
+
+	departments, err := s.departmentRepo.FindByIDsWithRelations(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	return departments, nil
+}
+
 // CreateDepartment creates a new department
-func (s *OrganizationApplicationService) CreateDepartment(ctx context.Context, cmd appDto.CreateDepartmentCommand) (*domain.Department, error) {
+func (s *DepartmentApplicationService) CreateDepartment(ctx context.Context, cmd appDto.CreateDepartmentCommand) (*domain.DepartmentWithDetails, error) {
 	// Create domain entity
 	department := &domain.Department{
 		FullName:          cmd.FullName,
@@ -79,29 +96,115 @@ func (s *OrganizationApplicationService) CreateDepartment(ctx context.Context, c
 		return nil, err
 	}
 
-	// Convert to DTO and return
-	return department, nil
+	// Fetch the newly created department with all its details
+	detailedDepartments, err := s.departmentRepo.FindByIDsWithRelations(ctx, []int64{department.ID})
+	if err != nil {
+		// Log the error, but proceed with the basic info if details fail
+		return nil, err
+	}
+	if len(detailedDepartments) == 0 {
+		return nil, errors.New("failed to fetch department details after creation")
+	}
+
+	return detailedDepartments[0], nil
 }
 
 // UpdateDepartment updates an existing department with partial update support
-func (s *OrganizationApplicationService) UpdateDepartment(ctx context.Context, id int64, cmd appDto.UpdateDepartmentCommand) (*domain.Department, error) {
-	// Find existing department
-	department, err := s.departmentRepo.FindByID(ctx, id)
+func (s *DepartmentApplicationService) UpdateDepartment(ctx context.Context, id int64, cmd appDto.UpdateDepartmentCommand) (*domain.DepartmentWithDetails, error) {
+	// Find existing department (with details)
+	ids := make([]int64, 0, 1)
+	ids = append(ids, id)
+	departments, err := s.departmentRepo.FindByIDsWithRelations(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
 
-	// Apply updates using domain methods (only update fields that are provided)
-	department.UpdateInfo(cmd.FullName, cmd.Shortname)
-	department.AssignToBusinessUnit(cmd.BusinessUnitID)
-	department.AssignToGroupDepartment(cmd.GroupDepartmentID)
-	department.AssignLeader(cmd.LeaderID)
+	// Extract the underlying domain.Department pointer
+	department := departments[0]
 
+	// Apply updates using domain methods (only update fields that are provided)
+	department.FullName = *cmd.FullName
+	department.Shortname = *cmd.Shortname
+	department.GroupDepartmentID = cmd.GroupDepartmentID
+	department.LeaderID = cmd.LeaderID
+	department.BusinessUnitID = cmd.BusinessUnitID
+
+	fmt.Println("BYHBUYJBKJH: ", department.BusinessUnitID)
 	// Persist changes
-	if err := s.departmentRepo.Update(ctx, department); err != nil {
+	if err := s.departmentRepo.Update(ctx, &domain.Department{
+		ID:                department.ID,
+		GroupDepartmentID: department.GroupDepartmentID,
+		FullName:          department.FullName,
+		Shortname:         department.Shortname,
+		BusinessUnitID:    department.BusinessUnitID,
+		LeaderID:          department.LeaderID,
+		CreatedAt:         department.CreatedAt,
+		UpdatedAt:         department.UpdatedAt,
+		DeletedAt:         department.DeletedAt,
+	}); err != nil {
 		return nil, err
 	}
 
-	// Convert to DTO and return
+	// Return the updated domain.Department
+	return department, nil
+}
+
+// AssignLeader assigns a leader to a department using either ID or domain
+func (s *DepartmentApplicationService) AssignLeader(ctx context.Context, cmd appDto.AssignLeaderCommand) (*domain.DepartmentWithDetails, error) {
+	// Find existing department (with details)
+	ids := make([]int64, 0, 1)
+	ids = append(ids, cmd.DepartmentID)
+	departments, err := s.departmentRepo.FindByIDsWithRelations(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(departments) == 0 {
+		return nil, response.NewAPIError(404, "Department not found", nil)
+	}
+
+	// Extract the underlying domain.Department pointer
+	department := departments[0]
+
+	// Handle leader assignment based on identifier type
+	switch cmd.LeaderIdentifierType {
+	case "id":
+		if cmd.LeaderID != nil {
+			department.LeaderID = cmd.LeaderID
+		}
+	case "domain":
+		// For domain-based assignment, you might need to:
+		// 1. Look up user by domain to get their ID
+		// 2. Then assign the ID to the department
+		// For now, this is a placeholder - you'll need to implement user lookup logic
+		if cmd.LeaderDomain != nil {
+			// TODO: Implement user lookup by domain
+			// userID, err := s.userService.FindUserIDByDomain(ctx, *cmd.LeaderDomain)
+			// if err != nil {
+			//     return nil, err
+			// }
+			// department.LeaderID = &userID
+			return nil, response.NewAPIError(400, "Leader assignment by domain not yet implemented", nil)
+		}
+	default:
+		return nil, response.NewAPIError(400, "Invalid leader identifier type", nil)
+	}
+
+	// Persist changes
+	if err := s.departmentRepo.Update(ctx, &domain.Department{
+		ID:                department.ID,
+		GroupDepartmentID: department.GroupDepartmentID,
+		FullName:          department.FullName,
+		Shortname:         department.Shortname,
+		BusinessUnitID:    department.BusinessUnitID,
+		LeaderID:          department.LeaderID,
+		CreatedAt:         department.CreatedAt,
+		UpdatedAt:         department.UpdatedAt,
+		DeletedAt:         department.DeletedAt,
+	}); err != nil {
+		return nil, err
+	}
+
+	// Return the updated department
 	return department, nil
 }

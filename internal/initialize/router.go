@@ -28,10 +28,6 @@ func InitRouter(
 	kafkaTopic string,
 	kafkaConsumerGroup string,
 ) *gin.Engine {
-	// Initialize the router
-	// This function will set up the routes and middleware for the application
-	// It will return a gin.Engine instance that can be used to run the server
-
 	var r *gin.Engine
 	// Set the mode based on the environment
 	if isLogger == "debug" {
@@ -43,10 +39,8 @@ func InitRouter(
 		r = gin.New()
 	}
 	// middlewares
-	r.Use(middleware.CORS) // cross-origin resource sharing
-	// r.Use() // logging
+	r.Use(middleware.CORS)
 
-	// r.Use() // limiter global
 	r.GET("/ping/100", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{"message": "pong"})
 	})
@@ -59,14 +53,13 @@ func InitRouter(
 	// Swagger UI
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// === Đăng ký routes theo module
 	v1 := r.Group("/api/v1")
 
 	// Register the organization routes (get department repo and business unit repo for sharing)
 	orgHandler, departmentRepo, businessUnitRepo := initOrg.InitOrganization(db)
 	orgHttp.RegisterOrganizationRoutes(v1, orgHandler)
 
-	starterHandler, starterSearchService, kafkaConsumer := initStarter.InitStarter(
+	starterHandler, _, kafkaConsumer := initStarter.InitStarter(
 		db,
 		esClient,
 		departmentRepo,
@@ -75,9 +68,8 @@ func InitRouter(
 		kafkaTopic,
 		kafkaConsumerGroup,
 	)
-	starterHttp.RegisterStarterRoutes(v1, starterHandler, starterSearchService)
+	starterHttp.RegisterStarterRoutes(v1, starterHandler)
 
-	// Setup graceful shutdown for Kafka consumer
 	setupGracefulShutdown(kafkaConsumer)
 
 	return r

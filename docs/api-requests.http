@@ -24,10 +24,10 @@ GET {{baseUrl}}/ping/100
 ###############################################################################
 
 ### 1. List Departments - Basic (with defaults)
-GET {{baseUrl}}{{apiVersion}}/departments
+GET `{{baseUrl}}{{apiVersion}}/business-units`
 
 ### 2. List Departments - With pagination
-GET {{baseUrl}}{{apiVersion}}/departments?page=1&limit=5
+GET {{baseUrl}}{{apiVersion}}/departments?page=1&limit=1
 
 ### 3. List Departments - Filter by business unit
 GET {{baseUrl}}{{apiVersion}}/departments?business_unit_id=1
@@ -93,6 +93,7 @@ Content-Type: application/json
 {
   "leader_id": 1
 }
+
 ### 11.2
 PATCH {{baseUrl}}{{apiVersion}}/departments/1/leader
 Content-Type: application/json

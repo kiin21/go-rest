@@ -29,22 +29,6 @@ type SyncEventQueue struct {
 	handler     func(context.Context, *SyncEvent) error
 }
 
-// NewSyncEventQueue creates a new event queue
-func NewSyncEventQueue(bufferSize, workers, maxRetries int, handler func(context.Context, *SyncEvent) error) *SyncEventQueue {
-	ctx, cancel := context.WithCancel(context.Background())
-
-	return &SyncEventQueue{
-		events:      make(chan *SyncEvent, bufferSize),
-		deadLetter:  make(chan *SyncEvent, bufferSize),
-		workers:     workers,
-		maxRetries:  maxRetries,
-		retryConfig: DefaultRetryConfig(),
-		ctx:         ctx,
-		cancel:      cancel,
-		handler:     handler,
-	}
-}
-
 // Start starts the queue workers
 func (q *SyncEventQueue) Start() {
 	log.Printf("[SyncEventQueue] Starting %d workers...", q.workers)

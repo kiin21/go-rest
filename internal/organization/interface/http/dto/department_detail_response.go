@@ -6,51 +6,29 @@ import (
 	"github.com/kiin21/go-rest/internal/organization/domain"
 )
 
-// DepartmentDetailResponse represents the full department response with all nested data
 type DepartmentDetailResponse struct {
 	ID                  int64               `json:"id"`
-	GroupDepartmentID   *int64              `json:"group_department_id"`
 	FullName            string              `json:"full_name"`
 	Shortname           string              `json:"shortname"`
 	BusinessUnit        *BusinessUnitNested `json:"business_unit,omitempty"`
 	Leader              *LeaderNested       `json:"leader,omitempty"`
 	ParentDepartment    *DepartmentNested   `json:"parent_department,omitempty"`
+	Subdepartments      []*DepartmentNested `json:"subdepartments,omitempty"`
 	MembersCount        int                 `json:"members_count"`
 	SubdepartmentsCount int                 `json:"subdepartments_count"`
-	Subdepartments      []*DepartmentNested `json:"subdepartments,omitempty"`
 	CreatedAt           time.Time           `json:"created_at"`
 	UpdatedAt           time.Time           `json:"updated_at"`
 }
 
-// BusinessUnitNested represents nested business unit data
-type BusinessUnitNested struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	Shortname string `json:"shortname,omitempty"`
-}
-
-// LeaderNested represents nested leader (starter) data
-type LeaderNested struct {
-	ID       int64  `json:"id"`
-	Domain   string `json:"domain"`
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	JobTitle string `json:"job_title"`
-}
-
-// DepartmentNested represents simplified department (for parent/subdepartments)
 type DepartmentNested struct {
-	ID           int64  `json:"id"`
-	FullName     string `json:"full_name"`
-	Shortname    string `json:"shortname"`
-	MembersCount int    `json:"members_count"`
+	ID        int64  `json:"id"`
+	FullName  string `json:"full_name"`
+	Shortname string `json:"shortname"`
 }
 
-// FromDomainWithDetails converts domain.DepartmentWithDetails to DTO
 func FromDomainWithDetails(dept *domain.DepartmentWithDetails) *DepartmentDetailResponse {
 	response := &DepartmentDetailResponse{
 		ID:                  dept.ID,
-		GroupDepartmentID:   dept.GroupDepartmentID,
 		FullName:            dept.FullName,
 		Shortname:           dept.Shortname,
 		MembersCount:        dept.MembersCount,
@@ -59,7 +37,6 @@ func FromDomainWithDetails(dept *domain.DepartmentWithDetails) *DepartmentDetail
 		UpdatedAt:           dept.UpdatedAt,
 	}
 
-	// Map business unit
 	if dept.BusinessUnit != nil {
 		response.BusinessUnit = &BusinessUnitNested{
 			ID:        dept.BusinessUnit.ID,
@@ -68,7 +45,6 @@ func FromDomainWithDetails(dept *domain.DepartmentWithDetails) *DepartmentDetail
 		}
 	}
 
-	// Map leader
 	if dept.Leader != nil {
 		response.Leader = &LeaderNested{
 			ID:       dept.Leader.ID,
@@ -79,25 +55,21 @@ func FromDomainWithDetails(dept *domain.DepartmentWithDetails) *DepartmentDetail
 		}
 	}
 
-	// Map parent department
 	if dept.ParentDepartment != nil {
 		response.ParentDepartment = &DepartmentNested{
-			ID:           dept.ParentDepartment.ID,
-			FullName:     dept.ParentDepartment.FullName,
-			Shortname:    dept.ParentDepartment.Shortname,
-			MembersCount: dept.ParentDepartment.MembersCount,
+			ID:        dept.ParentDepartment.ID,
+			FullName:  dept.ParentDepartment.FullName,
+			Shortname: dept.ParentDepartment.Shortname,
 		}
 	}
 
-	// Map subdepartments
 	if len(dept.Subdepartments) > 0 {
 		response.Subdepartments = make([]*DepartmentNested, len(dept.Subdepartments))
 		for i, sd := range dept.Subdepartments {
 			response.Subdepartments[i] = &DepartmentNested{
-				ID:           sd.ID,
-				FullName:     sd.FullName,
-				Shortname:    sd.Shortname,
-				MembersCount: sd.MembersCount,
+				ID:        sd.ID,
+				FullName:  sd.FullName,
+				Shortname: sd.Shortname,
 			}
 		}
 	}

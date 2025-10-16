@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
-	model "github.com/kiin21/go-rest/internal/starter/infrastructure/persistence/model"
-	"github.com/kiin21/go-rest/internal/starter/domain"
 	sharedDomain "github.com/kiin21/go-rest/internal/shared/domain"
+	"github.com/kiin21/go-rest/internal/shared/infrastructure/persistence/model"
+	"github.com/kiin21/go-rest/internal/starter/domain"
 	"github.com/kiin21/go-rest/pkg/response"
 	"gorm.io/gorm"
 )
@@ -21,6 +21,7 @@ type MySQLStarterRepository struct {
 
 // NewMySQLStarterRepository creates a new MySQL repository
 func NewMySQLStarterRepository(db *gorm.DB) domain.StarterRepository {
+
 	return &MySQLStarterRepository{db: db}
 }
 
@@ -185,8 +186,6 @@ func (r *MySQLStarterRepository) FindSubordinates(ctx context.Context, managerID
 
 	return starters, nil
 }
-
-// Helper methods
 
 // applyFilters applies ListFilter to query
 func (r *MySQLStarterRepository) applyFilters(query *gorm.DB, filter domain.ListFilter) *gorm.DB {

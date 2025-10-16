@@ -5,7 +5,6 @@ type ListDepartmentsRequest struct {
 	BusinessUnitID        *int64 `form:"business_unit_id" binding:"omitempty,gt=0"`
 	Page                  int    `form:"page" binding:"omitempty,min=1"`
 	Limit                 int    `form:"limit" binding:"omitempty,min=1,max=100"`
-	IncludeSubdepartments bool   `form:"include_subdepartments"`
 }
 
 // SetDefaults sets default values for the request

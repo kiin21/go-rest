@@ -108,7 +108,7 @@ func (s *StarterEnrichmentService) loadDepartments(
 
 // mapDepartmentRelation maps department relation to enriched data structure
 func (s *StarterEnrichmentService) mapDepartmentRelation(
-	rel *orgDomain.DepartmentWithRelations,
+	rel *orgDomain.DepartmentWithDetails,
 	enriched *EnrichedData,
 ) {
 	dept := rel.Department
@@ -121,11 +121,11 @@ func (s *StarterEnrichmentService) mapDepartmentRelation(
 	}
 
 	// Add group department if exists
-	if rel.GroupDepartment != nil {
+	if rel.ParentDepartment != nil {
 		deptNested.GroupDepartment = &GroupDepartmentNested{
-			ID:        rel.GroupDepartment.ID,
-			Name:      rel.GroupDepartment.FullName,
-			Shortname: rel.GroupDepartment.Shortname,
+			ID:        rel.ParentDepartment.ID,
+			Name:      rel.ParentDepartment.FullName,
+			Shortname: rel.ParentDepartment.Shortname,
 		}
 	}
 

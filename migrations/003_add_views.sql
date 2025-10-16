@@ -81,3 +81,4 @@ GROUP BY d.id, d.group_department_id, d.full_name, d.shortname,
 
 -- Test query
 -- SELECT * FROM v_departments_with_counts WHERE id = 5;
+SELECT * FROM v_departments_with_counts;

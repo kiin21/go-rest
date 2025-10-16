@@ -25,7 +25,7 @@ type StarterDocument struct {
 	// Metadata
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-	IndexedAt time.Time `json:"indexed_at"` // When indexed to ES
+	IndexedAt time.Time `json:"indexed_at"`
 }
 
 // IndexMappingJSON returns the Elasticsearch index mapping

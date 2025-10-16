@@ -221,10 +221,10 @@ func (sh *StarterHandler) Find(ctx *gin.Context) (res interface{}, err error) {
 	return enrichedResponse, nil
 }
 
-// [PUT] /api/v1/starters/:domain
+// [PATCH] /api/v1/starters/:domain
 // UpdateStarter godoc
 // @Summary Update starter
-// @Description Updates starter information by domain.
+// @Description Partially updates starter information by domain.
 // @Tags Starters
 // @Accept json
 // @Produce json
@@ -234,7 +234,7 @@ func (sh *StarterHandler) Find(ctx *gin.Context) (res interface{}, err error) {
 // @Failure 400 {object} response.APIResponse
 // @Failure 404 {object} response.APIResponse
 // @Failure 500 {object} response.APIResponse
-// @Router /starters/{domain} [put]
+// @Router /starters/{domain} [patch]
 func (sh *StarterHandler) UpdateStarter(ctx *gin.Context) (res interface{}, err error) {
 	var req presentationDto.UpdateStarterRequest
 

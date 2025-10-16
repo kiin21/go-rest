@@ -17,6 +17,8 @@ RUN go mod download
 COPY . .
 
 # Build the application
+RUN go install github.com/swaggo/swag/cmd/swag@latest
+RUN swag init -g cmd/api/main.go
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/api/main.go
 
 # Final stage

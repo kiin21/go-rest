@@ -57,12 +57,3 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 	log.Println("Database connection established successfully.")
 	return DB, nil
 }
-
-// GetDB trả về instance DB đã được khởi tạo
-// Bạn có thể sử dụng hàm này ở các nơi khác trong ứng dụng để lấy DB instance
-func GetDB() *gorm.DB {
-	if DB == nil {
-		log.Fatal("Database not initialized. Call InitDB() first.")
-	}
-	return DB
-}
