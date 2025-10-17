@@ -9,7 +9,8 @@ import (
 	"github.com/go-sql-driver/mysql"
 	sharedDomain "github.com/kiin21/go-rest/internal/shared/domain"
 	"github.com/kiin21/go-rest/internal/shared/infrastructure/persistence/model"
-	"github.com/kiin21/go-rest/internal/starter/domain"
+	starterAggregate "github.com/kiin21/go-rest/internal/starter/domain/aggregate"
+	starterPort "github.com/kiin21/go-rest/internal/starter/domain/port"
 	"github.com/kiin21/go-rest/pkg/response"
 	"gorm.io/gorm"
 )
@@ -20,14 +21,14 @@ type MySQLStarterRepository struct {
 }
 
 // NewMySQLStarterRepository creates a new MySQL repository
-func NewMySQLStarterRepository(db *gorm.DB) domain.StarterRepository {
+func NewMySQLStarterRepository(db *gorm.DB) starterPort.StarterRepository {
 
 	return &MySQLStarterRepository{db: db}
 }
 
 // Create creates a new starter in the database
 // Note: Domain uniqueness should be validated by Domain Service before calling this
-func (r *MySQLStarterRepository) Create(ctx context.Context, starter *domain.Starter) error {
+func (r *MySQLStarterRepository) Create(ctx context.Context, starter *starterAggregate.Starter) error {
 	model := r.toModel(starter)
 
 	if err := r.db.WithContext(ctx).Create(model).Error; err != nil {
@@ -42,7 +43,7 @@ func (r *MySQLStarterRepository) Create(ctx context.Context, starter *domain.Sta
 }
 
 // Update updates an existing starter
-func (r *MySQLStarterRepository) Update(ctx context.Context, starter *domain.Starter) error {
+func (r *MySQLStarterRepository) Update(ctx context.Context, starter *starterAggregate.Starter) error {
 	starterModel := r.toModel(starter)
 
 	result := r.db.WithContext(ctx).
@@ -61,11 +62,11 @@ func (r *MySQLStarterRepository) Update(ctx context.Context, starter *domain.Sta
 	return nil
 }
 
-func (r *MySQLStarterRepository) FindByID(ctx context.Context, id int64) (*domain.Starter, error) {
+func (r *MySQLStarterRepository) FindByID(ctx context.Context, id int64) (*starterAggregate.Starter, error) {
 	var model model.StarterModel
 
 	if err := r.db.WithContext(ctx).Where("id = ? AND deleted_at IS NULL", id).First(&model).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, sharedDomain.ErrNotFound
 		}
 		return nil, fmt.Errorf("failed to find starter by id: %w", err)
@@ -74,11 +75,11 @@ func (r *MySQLStarterRepository) FindByID(ctx context.Context, id int64) (*domai
 	return r.toDomain(&model), nil
 }
 
-func (r *MySQLStarterRepository) FindByDomain(ctx context.Context, domainName string) (*domain.Starter, error) {
+func (r *MySQLStarterRepository) FindByDomain(ctx context.Context, domainName string) (*starterAggregate.Starter, error) {
 	var model model.StarterModel
 
 	if err := r.db.WithContext(ctx).Where("domain = ? AND deleted_at IS NULL", domainName).First(&model).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, sharedDomain.ErrNotFound
 		}
 		return nil, fmt.Errorf("failed to find starter by domain: %w", err)
@@ -107,7 +108,7 @@ func (r *MySQLStarterRepository) SoftDelete(ctx context.Context, domainName stri
 }
 
 // List returns a paginated list of starters with optional filters (excludes soft deleted)
-func (r *MySQLStarterRepository) List(ctx context.Context, filter domain.ListFilter, pg response.ReqPagination) ([]*domain.Starter, int64, error) {
+func (r *MySQLStarterRepository) List(ctx context.Context, filter starterPort.ListFilter, pg response.ReqPagination) ([]*starterAggregate.Starter, int64, error) {
 	var models []model.StarterModel
 	var total int64
 
@@ -127,7 +128,7 @@ func (r *MySQLStarterRepository) List(ctx context.Context, filter domain.ListFil
 		return nil, 0, fmt.Errorf("failed to list starters: %w", err)
 	}
 
-	starters := make([]*domain.Starter, len(models))
+	starters := make([]*starterAggregate.Starter, len(models))
 	for i, model := range models {
 		starters[i] = r.toDomain(&model)
 	}
@@ -136,7 +137,7 @@ func (r *MySQLStarterRepository) List(ctx context.Context, filter domain.ListFil
 }
 
 // SearchByKeyword performs keyword search across domain, email, mobile, job title (excludes soft deleted)
-func (r *MySQLStarterRepository) SearchByKeyword(ctx context.Context, keyword string, filter domain.ListFilter, pg response.ReqPagination) ([]*domain.Starter, int64, error) {
+func (r *MySQLStarterRepository) SearchByKeyword(ctx context.Context, keyword string, filter starterPort.ListFilter, pg response.ReqPagination) ([]*starterAggregate.Starter, int64, error) {
 	var models []model.StarterModel
 	var total int64
 
@@ -163,7 +164,7 @@ func (r *MySQLStarterRepository) SearchByKeyword(ctx context.Context, keyword st
 		return nil, 0, fmt.Errorf("failed to search starters: %w", err)
 	}
 
-	starters := make([]*domain.Starter, len(models))
+	starters := make([]*starterAggregate.Starter, len(models))
 	for i, model := range models {
 		starters[i] = r.toDomain(&model)
 	}
@@ -172,14 +173,14 @@ func (r *MySQLStarterRepository) SearchByKeyword(ctx context.Context, keyword st
 }
 
 // FindSubordinates finds all subordinates of a line manager
-func (r *MySQLStarterRepository) FindSubordinates(ctx context.Context, managerID int64) ([]*domain.Starter, error) {
+func (r *MySQLStarterRepository) FindSubordinates(ctx context.Context, managerID int64) ([]*starterAggregate.Starter, error) {
 	var models []model.StarterModel
 
 	if err := r.db.WithContext(ctx).Where("line_manager_id = ?", managerID).Find(&models).Error; err != nil {
 		return nil, fmt.Errorf("failed to find subordinates: %w", err)
 	}
 
-	starters := make([]*domain.Starter, len(models))
+	starters := make([]*starterAggregate.Starter, len(models))
 	for i, model := range models {
 		starters[i] = r.toDomain(&model)
 	}
@@ -188,7 +189,7 @@ func (r *MySQLStarterRepository) FindSubordinates(ctx context.Context, managerID
 }
 
 // applyFilters applies ListFilter to query
-func (r *MySQLStarterRepository) applyFilters(query *gorm.DB, filter domain.ListFilter) *gorm.DB {
+func (r *MySQLStarterRepository) applyFilters(query *gorm.DB, filter starterPort.ListFilter) *gorm.DB {
 	if filter.DepartmentID != nil {
 		query = query.Where("department_id = ?", *filter.DepartmentID)
 	}
@@ -206,8 +207,8 @@ func (r *MySQLStarterRepository) applyFilters(query *gorm.DB, filter domain.List
 	return query
 }
 
-// toModel converts domain Starter to database model
-func (r *MySQLStarterRepository) toModel(starter *domain.Starter) *model.StarterModel {
+// toModel converts domain Starter to database entity
+func (r *MySQLStarterRepository) toModel(starter *starterAggregate.Starter) *model.StarterModel {
 	return &model.StarterModel{
 		ID:            starter.ID(),
 		Domain:        starter.Domain(),
@@ -223,9 +224,9 @@ func (r *MySQLStarterRepository) toModel(starter *domain.Starter) *model.Starter
 	}
 }
 
-// toDomain converts database model to domain Starter
-func (r *MySQLStarterRepository) toDomain(model *model.StarterModel) *domain.Starter {
-	return domain.RehydrateStarter(
+// toDomain converts database entity to domain Starter
+func (r *MySQLStarterRepository) toDomain(model *model.StarterModel) *starterAggregate.Starter {
+	return starterAggregate.Rehydrate(
 		model.ID,
 		model.Domain,
 		model.Name,

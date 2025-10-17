@@ -28,7 +28,7 @@ type ListStartersQuery struct {
 type SearchStartersQuery struct {
 	// Search query string - intelligent search
 	// Priority: domain > name > business unit name
-	Query string
+	Keyword string
 
 	// Filters
 	DepartmentID   *int64

@@ -7,8 +7,6 @@ import (
 )
 
 type DepartmentRepository interface {
-	List(ctx context.Context, filter DepartmentListFilter, pg response.ReqPagination) ([]*Department, int64, error)
-
 	ListWithDetails(ctx context.Context, filter DepartmentListFilter, pg response.ReqPagination) ([]*DepartmentWithDetails, int64, error)
 
 	FindByIDsWithRelations(ctx context.Context, ids []int64) ([]*DepartmentWithDetails, error)
@@ -19,5 +17,5 @@ type DepartmentRepository interface {
 }
 
 type DepartmentListFilter struct {
-	BusinessUnitID        *int64
+	BusinessUnitID *int64
 }

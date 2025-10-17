@@ -12,9 +12,11 @@ import (
 	initOrg "github.com/kiin21/go-rest/internal/initialize/organization"
 	initStarter "github.com/kiin21/go-rest/internal/initialize/starter"
 	"github.com/kiin21/go-rest/internal/middleware"
-	orgHttp "github.com/kiin21/go-rest/internal/organization/interface/http"
-	"github.com/kiin21/go-rest/internal/shared/infrastructure"
-	starterHttp "github.com/kiin21/go-rest/internal/starter/interface/http"
+	orgHttp "github.com/kiin21/go-rest/internal/organization/presentation/http"
+	messagingKafka "github.com/kiin21/go-rest/internal/shared/infrastructure/messagebroker/kafka"
+	starterRepository "github.com/kiin21/go-rest/internal/starter/infrastructure/persistence/repository"
+	starterHttp "github.com/kiin21/go-rest/internal/starter/presentation/http"
+	"github.com/kiin21/go-rest/pkg/httpctx"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/gorm"
@@ -24,6 +26,7 @@ func InitRouter(
 	db *gorm.DB,
 	esClient *elasticsearch.Client,
 	isLogger string,
+	publicBaseURL string,
 	kafkaBrokers string,
 	kafkaTopic string,
 	kafkaConsumerGroup string,
@@ -55,15 +58,18 @@ func InitRouter(
 
 	v1 := r.Group("/api/v1")
 
+	requestURLResolver := httpctx.NewRequestURLResolver(publicBaseURL)
+	starterRepo := starterRepository.NewMySQLStarterRepository(db)
+
 	// Register the organization routes (get department repo and business unit repo for sharing)
-	orgHandler, departmentRepo, businessUnitRepo := initOrg.InitOrganization(db)
+	orgHandler, departmentRepo := initOrg.InitOrganization(db, requestURLResolver, starterRepo)
 	orgHttp.RegisterOrganizationRoutes(v1, orgHandler)
 
-	starterHandler, _, kafkaConsumer := initStarter.InitStarter(
-		db,
+	starterHandler, kafkaConsumer := initStarter.InitStarter(
 		esClient,
+		starterRepo,
 		departmentRepo,
-		businessUnitRepo,
+		requestURLResolver,
 		kafkaBrokers,
 		kafkaTopic,
 		kafkaConsumerGroup,
@@ -76,7 +82,7 @@ func InitRouter(
 }
 
 // setupGracefulShutdown handles graceful shutdown of Kafka consumer
-func setupGracefulShutdown(kafkaConsumer *infrastructure.KafkaConsumer) {
+func setupGracefulShutdown(kafkaConsumer *messagingKafka.Consumer) {
 	sigterm := make(chan os.Signal, 1)
 	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
 

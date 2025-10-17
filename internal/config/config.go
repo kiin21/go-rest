@@ -1,12 +1,13 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/spf13/viper"
 )
 
-// Manage config with Viper
+// Config Management config with Viper
 type Config struct {
 	// App config
 	DBHost     string `mapstructure:"DB_HOST"`
@@ -27,6 +28,9 @@ type Config struct {
 	KafkaTopicSyncEvents string `mapstructure:"KAFKA_TOPIC_SYNC_EVENTS"`
 	KafkaConsumerGroup   string `mapstructure:"KAFKA_CONSUMER_GROUP"`
 
+	// HTTP metadata
+	PublicBaseURL string `mapstructure:"PUBLIC_BASE_URL"`
+
 	// DBDriver      string `mapstructure:"DB_DRIVER"`
 	// AppVersion    string `mapstructure:"APP_VERSION"`
 	// ServerAddress string `mapstructure:"SERVER_ADDRESS"`
@@ -41,7 +45,8 @@ func LoadConfig() (config Config, err error) {
 	err = viper.ReadInConfig()
 	if err != nil {
 		// If the config file is not found, return a specific error
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if errors.As(err, &configFileNotFoundError) {
 			return config, fmt.Errorf("config file not found: %w", err)
 		}
 		return config, fmt.Errorf("error reading config file: %w", err)

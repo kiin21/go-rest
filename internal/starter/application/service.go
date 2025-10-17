@@ -9,23 +9,25 @@ import (
 
 	"github.com/kiin21/go-rest/internal/shared/domain"
 	appDto "github.com/kiin21/go-rest/internal/starter/application/dto"
-	starterDomain "github.com/kiin21/go-rest/internal/starter/domain"
-	"github.com/kiin21/go-rest/internal/starter/interface/http/dto"
+	starterAggregate "github.com/kiin21/go-rest/internal/starter/domain/aggregate"
+	starterPort "github.com/kiin21/go-rest/internal/starter/domain/port"
+	starterService "github.com/kiin21/go-rest/internal/starter/domain/service"
+	"github.com/kiin21/go-rest/internal/starter/presentation/http/dto"
 	"github.com/kiin21/go-rest/pkg/response"
 )
 
 type StarterApplicationService struct {
-	repo              starterDomain.StarterRepository
-	domainService     *starterDomain.StarterDomainService
+	repo              starterPort.StarterRepository
+	domainService     *starterService.StarterDomainService
 	searchService     *StarterSearchService
-	enrichmentService *starterDomain.StarterEnrichmentService
+	enrichmentService *starterService.StarterEnrichmentService
 }
 
 func NewStarterApplicationService(
-	repo starterDomain.StarterRepository,
-	domainService *starterDomain.StarterDomainService,
+	repo starterPort.StarterRepository,
+	domainService *starterService.StarterDomainService,
 	searchService *StarterSearchService,
-	enrichmentService *starterDomain.StarterEnrichmentService,
+	enrichmentService *starterService.StarterEnrichmentService,
 ) *StarterApplicationService {
 	return &StarterApplicationService{
 		repo:              repo,
@@ -38,11 +40,11 @@ func NewStarterApplicationService(
 func (s *StarterApplicationService) GetAllStarters(
 	ctx context.Context,
 	query appDto.ListStartersQuery,
-) (*response.PaginatedResult[*starterDomain.Starter], error) {
+) (*response.PaginatedResult[*starterAggregate.Starter], error) {
 	// If keyword exists and Elasticsearch is available → Use Elasticsearch
 	if query.Keyword != "" && s.searchService != nil {
 		searchQuery := appDto.SearchStartersQuery{
-			Query:          query.Keyword,
+			Keyword:        query.Keyword,
 			DepartmentID:   query.DepartmentID,
 			BusinessUnitID: query.BusinessUnitID,
 			Pagination:     query.Pagination,
@@ -51,12 +53,12 @@ func (s *StarterApplicationService) GetAllStarters(
 	}
 
 	// Fallback to MySQL (keyword search or list)
-	filter := starterDomain.ListFilter{
+	filter := starterPort.ListFilter{
 		DepartmentID:   query.DepartmentID,
 		BusinessUnitID: query.BusinessUnitID,
 	}
 
-	var starters []*starterDomain.Starter
+	var starters []*starterAggregate.Starter
 	var total int64
 	var err error
 
@@ -87,44 +89,7 @@ func (s *StarterApplicationService) GetAllStarters(
 		next = &value
 	}
 
-	return &response.PaginatedResult[*starterDomain.Starter]{
-		Data: starters,
-		Pagination: response.RespPagination{
-			Limit:      query.Pagination.Limit,
-			TotalItems: total,
-			Prev:       prev,
-			Next:       next,
-		},
-	}, nil
-}
-
-// SearchStarters performs intelligent search across domain, name, and business unit
-// Priority: domain > name > business unit name
-func (s *StarterApplicationService) SearchStarters(
-	ctx context.Context,
-	query appDto.SearchStartersQuery,
-) (*response.PaginatedResult[*starterDomain.Starter], error) {
-	var starters []*starterDomain.Starter
-	var total int64
-	var err error
-
-	starters, total, err = s.repo.SearchByKeyword(ctx, query.Query, starterDomain.ListFilter{}, query.Pagination)
-	if err != nil {
-		return nil, err
-	}
-
-	totalPages := int(total) / query.Pagination.Limit
-	if int(total)%query.Pagination.Limit > 0 {
-		totalPages++
-	}
-
-	var prev, next *string
-	if query.Pagination.Page > 1 {
-		value := strconv.Itoa(query.Pagination.Page - 1)
-		prev = &value
-	}
-
-	return &response.PaginatedResult[*starterDomain.Starter]{
+	return &response.PaginatedResult[*starterAggregate.Starter]{
 		Data: starters,
 		Pagination: response.RespPagination{
 			Limit:      query.Pagination.Limit,
@@ -136,19 +101,16 @@ func (s *StarterApplicationService) SearchStarters(
 }
 
 // CreateStarter creates a new starter and syncs to Elasticsearch
-func (s *StarterApplicationService) CreateStarter(ctx context.Context, command appDto.CreateStarterCommand) (*starterDomain.Starter, error) {
-	// Validate domain uniqueness using Domain Service
-	// This enforces the business rule: "Domain must be unique among active starters"
+func (s *StarterApplicationService) CreateStarter(ctx context.Context, command appDto.CreateStarterCommand) (*starterAggregate.Starter, error) {
 	if err := s.domainService.ValidateDomainUniqueness(ctx, command.Domain); err != nil {
 		if errors.Is(err, domain.ErrDomainAlreadyExists) {
-			// Return specific error for domain conflict
 			return nil, fmt.Errorf("domain '%s' already exists: %w", command.Domain, domain.ErrDomainAlreadyExists)
 		}
 		return nil, err
 	}
 
 	// Create new starter entity
-	starter, err := starterDomain.NewStarter(
+	starter, err := starterAggregate.NewStarter(
 		command.Domain,
 		command.Name,
 		command.Email,
@@ -163,12 +125,7 @@ func (s *StarterApplicationService) CreateStarter(ctx context.Context, command a
 	}
 
 	// Persist to MySQL
-	// Domain uniqueness already validated, so this should succeed
 	if err := s.repo.Create(ctx, starter); err != nil {
-		// Still check for duplicate as safety net (race condition)
-		if errors.Is(err, domain.ErrDuplicateEntry) {
-			return nil, fmt.Errorf("domain '%s' already exists: %w", command.Domain, domain.ErrDomainAlreadyExists)
-		}
 		return nil, err
 	}
 
@@ -185,7 +142,7 @@ func (s *StarterApplicationService) CreateStarter(ctx context.Context, command a
 }
 
 // GetStarterByDomain returns a single starter by domain (username)
-func (s *StarterApplicationService) GetStarterByDomain(ctx context.Context, domainName string) (*starterDomain.Starter, error) {
+func (s *StarterApplicationService) GetStarterByDomain(ctx context.Context, domainName string) (*starterAggregate.Starter, error) {
 	starter, err := s.repo.FindByDomain(ctx, domainName)
 	if err != nil {
 		return nil, err
@@ -195,7 +152,7 @@ func (s *StarterApplicationService) GetStarterByDomain(ctx context.Context, doma
 }
 
 // UpdateStarter updates an existing starter (supports partial updates)
-func (s *StarterApplicationService) UpdateStarter(ctx context.Context, command appDto.UpdateStarterCommand) (*starterDomain.Starter, error) {
+func (s *StarterApplicationService) UpdateStarter(ctx context.Context, command appDto.UpdateStarterCommand) (*starterAggregate.Starter, error) {
 	// Find existing starter
 	starter, err := s.repo.FindByDomain(ctx, command.Domain)
 	if err != nil {
@@ -278,20 +235,23 @@ func (s *StarterApplicationService) SoftDeleteStarter(ctx context.Context, domai
 	return nil
 }
 
-// EnrichStarters delegates enrichment to the domain service and converts to interface DTO
-// This follows SRP - coordination only, business logic in domain
-func (s *StarterApplicationService) EnrichStarters(ctx context.Context, starters []*starterDomain.Starter) (*dto.EnrichedData, error) {
+// EnrichStarters delegates enrichment to the domain service and converts to presentation DTO
+func (s *StarterApplicationService) EnrichStarters(ctx context.Context, starters []*starterAggregate.Starter) (*dto.StarterEnrichedData, error) {
 	// Get domain enriched data
 	domainEnriched, err := s.enrichmentService.EnrichStarters(ctx, starters)
 	if err != nil {
 		return nil, err
 	}
 
-	// Convert to interface DTO
-	interfaceEnriched := &dto.EnrichedData{
+	// Convert to presentation DTO
+	interfaceEnriched := &dto.StarterEnrichedData{
 		Departments:   make(map[int64]*dto.DepartmentNested),
 		LineManagers:  make(map[int64]*dto.LineManagerNested),
 		BusinessUnits: make(map[int64]*dto.BusinessUnitNested),
+	}
+
+	if domainEnriched == nil {
+		return interfaceEnriched, nil
 	}
 
 	// Map departments

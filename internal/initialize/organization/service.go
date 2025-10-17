@@ -1,19 +1,28 @@
 package initialize
 
 import (
+	"github.com/kiin21/go-rest/internal/composition"
 	orgApplication "github.com/kiin21/go-rest/internal/organization/application"
 	orgDomain "github.com/kiin21/go-rest/internal/organization/domain"
 	orgRepository "github.com/kiin21/go-rest/internal/organization/infrastructure/persistence/repository"
-	orgHttp "github.com/kiin21/go-rest/internal/organization/interface/http"
+	orgHttp "github.com/kiin21/go-rest/internal/organization/presentation/http"
+	"github.com/kiin21/go-rest/internal/starter/domain/port"
+	"github.com/kiin21/go-rest/pkg/httpctx"
 	"gorm.io/gorm"
 )
 
-func InitOrganization(db *gorm.DB) (*orgHttp.OrganizationHandler, orgDomain.DepartmentRepository, orgDomain.BusinessUnitRepository) {
+func InitOrganization(
+	db *gorm.DB,
+	requestURLResolver httpctx.RequestURLResolver,
+	starterRepo port.StarterRepository,
+) (*orgHttp.OrganizationHandler, orgDomain.DepartmentRepository) {
 	departmentRepo := orgRepository.NewMySQLDepartmentRepository(db)
 	businessUnitRepo := orgRepository.NewMySQLBusinessUnitRepository(db)
-	departmentService := orgApplication.NewDepartmentApplicationService(departmentRepo)
-	businessUnitService := orgApplication.NewBusinessUnitApplicationService(businessUnitRepo)
-	organizationHandler := orgHttp.NewOrganizationHandler(departmentService, businessUnitService)
 
-	return organizationHandler, departmentRepo, businessUnitRepo
+	leaderLookup := composition.NewStarterLeaderLookup(starterRepo)
+
+	organizationService := orgApplication.NewOrganizationApplicationService(departmentRepo, businessUnitRepo, leaderLookup)
+	organizationHandler := orgHttp.NewOrganizationHandler(organizationService, requestURLResolver)
+
+	return organizationHandler, departmentRepo
 }

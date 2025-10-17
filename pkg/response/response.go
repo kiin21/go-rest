@@ -1,12 +1,11 @@
 package response
 
 import (
-	"net/http"
+	"errors"
 
 	"github.com/gin-gonic/gin"
 )
 
-// StandardRes response format
 type APIResponse struct {
 	Code    int         `json:"code"`
 	Message string      `json:"message"`
@@ -36,10 +35,9 @@ func Wrap(handler HandlerFunc) func(c *gin.Context) {
 	return func(ctx *gin.Context) {
 		res, err := handler(ctx)
 		if err != nil {
-			if apiErr, ok := err.(*APIError); ok {
+			var apiErr *APIError
+			if errors.As(err, &apiErr) {
 				ErrorResponse(ctx, apiErr.StatusCode, apiErr.Message, apiErr.Err)
-			} else {
-				ErrorResponse(ctx, http.StatusInternalServerError, "Internal Server Error", err)
 			}
 			return
 		}

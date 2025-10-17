@@ -46,6 +46,7 @@ func Run() (*gin.Engine, string) {
 		db,
 		esClient,
 		cfg.LogLevel,
+		cfg.PublicBaseURL,
 		cfg.KafkaBrokers,
 		cfg.KafkaTopicSyncEvents,
 		cfg.KafkaConsumerGroup,

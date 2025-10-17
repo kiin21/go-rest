@@ -6,7 +6,7 @@ import "time"
 const indexName = "starters"
 
 // StarterDocument represents the Elasticsearch document structure for starters
-// This is optimized for search, different from MySQL model
+// This is optimized for search, different from MySQL entity
 type StarterDocument struct {
 	ID            int64  `json:"id"`
 	Domain        string `json:"domain"`

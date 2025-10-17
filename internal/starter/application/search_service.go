@@ -5,25 +5,24 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/kiin21/go-rest/internal/shared/infrastructure"
+	messaging "github.com/kiin21/go-rest/internal/shared/infrastructure/messagebroker"
+	"github.com/kiin21/go-rest/internal/shared/infrastructure/messagebroker/kafka"
 	appDto "github.com/kiin21/go-rest/internal/starter/application/dto"
-	"github.com/kiin21/go-rest/internal/starter/domain"
+	starterAggregate "github.com/kiin21/go-rest/internal/starter/domain/aggregate"
+	starterPort "github.com/kiin21/go-rest/internal/starter/domain/port"
 	"github.com/kiin21/go-rest/pkg/response"
 )
 
-// StarterSearchService handles search operations using Elasticsearch
-// Separated from StarterApplicationService for clear responsibility
 type StarterSearchService struct {
-	searchRepo    domain.StarterSearchRepository
-	repo          domain.StarterRepository // For fetching full data if needed
-	kafkaProducer *infrastructure.KafkaProducer
+	searchRepo    starterPort.StarterSearchRepository
+	repo          starterPort.StarterRepository
+	kafkaProducer *kafka.Producer
 }
 
-// NewStarterSearchService creates a new search service
 func NewStarterSearchService(
-	searchRepo domain.StarterSearchRepository,
-	repo domain.StarterRepository,
-	kafkaProducer *infrastructure.KafkaProducer,
+	searchRepo starterPort.StarterSearchRepository,
+	repo starterPort.StarterRepository,
+	kafkaProducer *kafka.Producer,
 ) *StarterSearchService {
 	return &StarterSearchService{
 		searchRepo:    searchRepo,
@@ -36,15 +35,15 @@ func NewStarterSearchService(
 func (s *StarterSearchService) Search(
 	ctx context.Context,
 	query appDto.SearchStartersQuery,
-) (*response.PaginatedResult[*domain.Starter], error) {
+) (*response.PaginatedResult[*starterAggregate.Starter], error) {
 
-	filter := domain.ListFilter{
+	filter := starterPort.ListFilter{
 		DepartmentID:   query.DepartmentID,
 		BusinessUnitID: query.BusinessUnitID,
 	}
 
-	// Use Elasticsearch for search
-	starters, total, err := s.searchRepo.Search(ctx, query.Query, filter, query.Pagination)
+	// Elasticsearch
+	starters, total, err := s.searchRepo.Search(ctx, query.Keyword, filter, query.Pagination)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +63,7 @@ func (s *StarterSearchService) Search(
 		next = &value
 	}
 
-	return &response.PaginatedResult[*domain.Starter]{
+	return &response.PaginatedResult[*starterAggregate.Starter]{
 		Data: starters,
 		Pagination: response.RespPagination{
 			Limit:      query.Pagination.Limit,
@@ -76,21 +75,21 @@ func (s *StarterSearchService) Search(
 }
 
 // IndexStarter publishes a starter indexing event to Kafka (call after Create/Update)
-func (s *StarterSearchService) IndexStarter(ctx context.Context, starter *domain.Starter) error {
+func (s *StarterSearchService) IndexStarter(ctx context.Context, starter *starterAggregate.Starter) error {
 	if s.kafkaProducer == nil {
 		// Kafka not configured, skip sync
 		return nil
 	}
 
-	event := &infrastructure.SyncEvent{
+	event := &messaging.SyncEvent{
 		Type:      "index",
 		Domain:    starter.Domain(),
-		Data:      nil, // Don't send full object, consumer will fetch from DB
+		Data:      nil,
 		Timestamp: time.Now(),
 		Retries:   0,
 	}
 
-	return s.kafkaProducer.PublishSyncEvent(ctx, event)
+	return s.kafkaProducer.PublishSyncEvent(event)
 }
 
 // DeleteFromIndex publishes a starter deletion event to Kafka (call after SoftDelete)
@@ -100,7 +99,7 @@ func (s *StarterSearchService) DeleteFromIndex(ctx context.Context, domain strin
 		return nil
 	}
 
-	event := &infrastructure.SyncEvent{
+	event := &messaging.SyncEvent{
 		Type:      "delete",
 		Domain:    domain,
 		Data:      nil, // Only need domain for deletion
@@ -119,7 +118,7 @@ func (s *StarterSearchService) ReindexAll(ctx context.Context) error {
 	totalIndexed := 0
 
 	for {
-		filter := domain.ListFilter{}
+		filter := starterPort.ListFilter{}
 		pagination := response.ReqPagination{Page: page, Limit: batchSize}
 
 		starters, total, err := s.repo.List(ctx, filter, pagination)

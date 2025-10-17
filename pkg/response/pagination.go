@@ -1,8 +1,8 @@
 package response
 
 type ReqPagination struct {
-	Page       int   `json:"page"`
-	Limit      int   `json:"limit"`
+	Page  int `json:"page"`
+	Limit int `json:"limit"`
 }
 
 type RespPagination struct {
@@ -13,6 +13,6 @@ type RespPagination struct {
 }
 
 type PaginatedResult[T any] struct {
-	Data       []T        `json:"data"`
+	Data       []T            `json:"data"`
 	Pagination RespPagination `json:"pagination"`
 }

@@ -4,30 +4,38 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 
 	appDto "github.com/kiin21/go-rest/internal/organization/application/dto"
 	"github.com/kiin21/go-rest/internal/organization/domain"
+	sharedDomain "github.com/kiin21/go-rest/internal/shared/domain"
 	"github.com/kiin21/go-rest/pkg/response"
 )
 
-// DepartmentApplicationService handles application-level business logic for departments.
-type DepartmentApplicationService struct {
-	departmentRepo domain.DepartmentRepository
+type OrganizationApplicationService struct {
+	departmentRepo   domain.DepartmentRepository
+	businessUnitRepo domain.BusinessUnitRepository
+	leaderLookup     LeaderLookup
 }
 
-// NewDepartmentApplicationService creates a new application service.
-func NewDepartmentApplicationService(departmentRepo domain.DepartmentRepository) *DepartmentApplicationService {
-	return &DepartmentApplicationService{
-		departmentRepo: departmentRepo,
+func NewOrganizationApplicationService(
+	departmentRepo domain.DepartmentRepository,
+	businessUnitRepo domain.BusinessUnitRepository,
+	leaderLookup LeaderLookup,
+) *OrganizationApplicationService {
+	return &OrganizationApplicationService{
+		departmentRepo:   departmentRepo,
+		businessUnitRepo: businessUnitRepo,
+		leaderLookup:     leaderLookup,
 	}
 }
 
-// GetAllDepartments returns a paginated list of departments with full details.
-func (s *DepartmentApplicationService) GetAllDepartments(ctx context.Context, query appDto.ListDepartmentsQuery) (*response.PaginatedResult[*domain.DepartmentWithDetails], error) {
-	filter := domain.DepartmentListFilter{
-		BusinessUnitID: query.BusinessUnitID,
-	}
+func (s *OrganizationApplicationService) GetAllDepartments(
+	ctx context.Context,
+	query appDto.ListDepartmentsQuery,
+) (*response.PaginatedResult[*domain.DepartmentWithDetails], error) {
+	filter := domain.DepartmentListFilter{BusinessUnitID: query.BusinessUnitID}
 
 	departments, total, err := s.departmentRepo.ListWithDetails(ctx, filter, query.Pagination)
 	if err != nil {
@@ -64,13 +72,12 @@ func (s *DepartmentApplicationService) GetAllDepartments(ctx context.Context, qu
 	}, nil
 }
 
-// GetOneDepartment retrieves departments (by IDs) with their relations loaded.
-// It accepts a query that contains one or more department IDs and returns
-// a slice of DepartmentWithDetails from the repository.
-func (s *DepartmentApplicationService) GetOneDepartment(ctx context.Context, query appDto.GetDepartmentQuery) ([]*domain.DepartmentWithDetails, error) {
-	// Convert []int to []int64 for repository
+func (s *OrganizationApplicationService) GetOneDepartment(
+	ctx context.Context,
+	query appDto.GetDepartmentQuery,
+) ([]*domain.DepartmentWithDetails, error) {
 	ids := make([]int64, 0, 1)
-	ids = append(ids, *query.ID)
+	ids = append(ids, query.ID)
 
 	departments, err := s.departmentRepo.FindByIDsWithRelations(ctx, ids)
 	if err != nil {
@@ -81,7 +88,7 @@ func (s *DepartmentApplicationService) GetOneDepartment(ctx context.Context, que
 }
 
 // CreateDepartment creates a new department
-func (s *DepartmentApplicationService) CreateDepartment(ctx context.Context, cmd appDto.CreateDepartmentCommand) (*domain.DepartmentWithDetails, error) {
+func (s *OrganizationApplicationService) CreateDepartment(ctx context.Context, cmd appDto.CreateDepartmentCommand) (*domain.DepartmentWithDetails, error) {
 	// Create domain entity
 	department := &domain.Department{
 		FullName:          cmd.FullName,
@@ -110,7 +117,7 @@ func (s *DepartmentApplicationService) CreateDepartment(ctx context.Context, cmd
 }
 
 // UpdateDepartment updates an existing department with partial update support
-func (s *DepartmentApplicationService) UpdateDepartment(ctx context.Context, id int64, cmd appDto.UpdateDepartmentCommand) (*domain.DepartmentWithDetails, error) {
+func (s *OrganizationApplicationService) UpdateDepartment(ctx context.Context, id int64, cmd appDto.UpdateDepartmentCommand) (*domain.DepartmentWithDetails, error) {
 	// Find existing department (with details)
 	ids := make([]int64, 0, 1)
 	ids = append(ids, id)
@@ -150,17 +157,17 @@ func (s *DepartmentApplicationService) UpdateDepartment(ctx context.Context, id 
 }
 
 // AssignLeader assigns a leader to a department using either ID or domain
-func (s *DepartmentApplicationService) AssignLeader(ctx context.Context, cmd appDto.AssignLeaderCommand) (*domain.DepartmentWithDetails, error) {
+func (s *OrganizationApplicationService) AssignLeader(ctx context.Context, cmd appDto.AssignLeaderCommand) (*domain.DepartmentWithDetails, error) {
 	// Find existing department (with details)
-	ids := make([]int64, 0, 1)
-	ids = append(ids, cmd.DepartmentID)
-	departments, err := s.departmentRepo.FindByIDsWithRelations(ctx, ids)
+	deptId := make([]int64, 0, 1)
+	deptId = append(deptId, cmd.DepartmentID)
+	departments, err := s.departmentRepo.FindByIDsWithRelations(ctx, deptId)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(departments) == 0 {
-		return nil, response.NewAPIError(404, "Department not found", nil)
+		return nil, sharedDomain.ErrNotFound
 	}
 
 	// Extract the underlying domain.Department pointer
@@ -173,18 +180,20 @@ func (s *DepartmentApplicationService) AssignLeader(ctx context.Context, cmd app
 			department.LeaderID = cmd.LeaderID
 		}
 	case "domain":
-		// For domain-based assignment, you might need to:
-		// 1. Look up user by domain to get their ID
-		// 2. Then assign the ID to the department
-		// For now, this is a placeholder - you'll need to implement user lookup logic
 		if cmd.LeaderDomain != nil {
-			// TODO: Implement user lookup by domain
-			// userID, err := s.userService.FindUserIDByDomain(ctx, *cmd.LeaderDomain)
-			// if err != nil {
-			//     return nil, err
-			// }
-			// department.LeaderID = &userID
-			return nil, response.NewAPIError(400, "Leader assignment by domain not yet implemented", nil)
+			if s.leaderLookup == nil {
+				return nil, response.NewAPIError(http.StatusNotImplemented, "starter lookup not configured", nil)
+			}
+
+			leaderID, err := s.leaderLookup.FindLeaderIDByDomain(ctx, *cmd.LeaderDomain)
+			if err != nil {
+				if errors.Is(err, sharedDomain.ErrNotFound) {
+					return nil, sharedDomain.ErrNotFound
+				}
+				return nil, err
+			}
+
+			department.LeaderID = &leaderID
 		}
 	default:
 		return nil, response.NewAPIError(400, "Invalid leader identifier type", nil)
@@ -207,4 +216,80 @@ func (s *DepartmentApplicationService) AssignLeader(ctx context.Context, cmd app
 
 	// Return the updated department
 	return department, nil
+}
+
+// ListBusinessUnits returns a paginated list of business units.
+func (s *OrganizationApplicationService) ListBusinessUnits(ctx context.Context, query appDto.ListBusinessUnitsQuery) (*response.PaginatedResult[*domain.BusinessUnit], error) {
+	units, total, err := s.businessUnitRepo.List(ctx, query.Pagination)
+	if err != nil {
+		return nil, err
+	}
+
+	totalPages := int(total) / query.Pagination.Limit
+	if int(total)%query.Pagination.Limit > 0 {
+		totalPages++
+	}
+
+	var prev, next *string
+	if query.Pagination.Page > 1 {
+		value := strconv.Itoa(query.Pagination.Page - 1)
+		prev = &value
+	}
+	if query.Pagination.Page < totalPages {
+		value := strconv.Itoa(query.Pagination.Page + 1)
+		next = &value
+	}
+
+	return &response.PaginatedResult[*domain.BusinessUnit]{
+		Data: units,
+		Pagination: response.RespPagination{
+			Limit:      query.Pagination.Limit,
+			TotalItems: total,
+			Prev:       prev,
+			Next:       next,
+		},
+	}, nil
+}
+
+// GetBusinessUnit retrieves a single business unit by ID.
+func (s *OrganizationApplicationService) GetBusinessUnit(ctx context.Context, id int64) (*domain.BusinessUnit, error) {
+	return s.businessUnitRepo.FindByID(ctx, id)
+}
+
+// ListBusinessUnitsWithDetails returns a paginated list of business units with company and leader details.
+func (s *OrganizationApplicationService) ListBusinessUnitsWithDetails(ctx context.Context, query appDto.ListBusinessUnitsQuery) (*response.PaginatedResult[*domain.BusinessUnitWithDetails], error) {
+	units, total, err := s.businessUnitRepo.ListWithDetails(ctx, query.Pagination)
+	if err != nil {
+		return nil, err
+	}
+
+	totalPages := int(total) / query.Pagination.Limit
+	if int(total)%query.Pagination.Limit > 0 {
+		totalPages++
+	}
+
+	var prev, next *string
+	if query.Pagination.Page > 1 {
+		value := strconv.Itoa(query.Pagination.Page - 1)
+		prev = &value
+	}
+	if query.Pagination.Page < totalPages {
+		value := strconv.Itoa(query.Pagination.Page + 1)
+		next = &value
+	}
+
+	return &response.PaginatedResult[*domain.BusinessUnitWithDetails]{
+		Data: units,
+		Pagination: response.RespPagination{
+			Limit:      query.Pagination.Limit,
+			TotalItems: total,
+			Prev:       prev,
+			Next:       next,
+		},
+	}, nil
+}
+
+// GetBusinessUnitWithDetails retrieves a single business unit with company and leader details by ID.
+func (s *OrganizationApplicationService) GetBusinessUnitWithDetails(ctx context.Context, id int64) (*domain.BusinessUnitWithDetails, error) {
+	return s.businessUnitRepo.FindByIDWithDetails(ctx, id)
 }

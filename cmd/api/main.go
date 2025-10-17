@@ -12,7 +12,7 @@ import (
 func main() {
 	r, port := initialize.Run()
 
-	docs.SwaggerInfo.Schemes = []string{"http"}
+	docs.SwaggerInfo.Schemes = []string{"http", "https"}
 
 	r.Run(":" + port)
 }

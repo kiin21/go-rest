@@ -10,7 +10,8 @@ import (
 
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
-	starterDomain "github.com/kiin21/go-rest/internal/starter/domain"
+	starterAggregate "github.com/kiin21/go-rest/internal/starter/domain/aggregate"
+	starterPort "github.com/kiin21/go-rest/internal/starter/domain/port"
 	"github.com/kiin21/go-rest/pkg/response"
 )
 
@@ -24,7 +25,7 @@ type ElasticsearchStarterRepository struct {
 }
 
 // NewElasticsearchStarterRepository creates a new Elasticsearch repository
-func NewElasticsearchStarterRepository(client *elasticsearch.Client) starterDomain.StarterSearchRepository {
+func NewElasticsearchStarterRepository(client *elasticsearch.Client) starterPort.StarterSearchRepository {
 	return &ElasticsearchStarterRepository{
 		client: client,
 	}
@@ -34,9 +35,9 @@ func NewElasticsearchStarterRepository(client *elasticsearch.Client) starterDoma
 func (r *ElasticsearchStarterRepository) Search(
 	ctx context.Context,
 	query string,
-	filter starterDomain.ListFilter,
+	filter starterPort.ListFilter,
 	pg response.ReqPagination,
-) ([]*starterDomain.Starter, int64, error) {
+) ([]*starterAggregate.Starter, int64, error) {
 
 	// Build Elasticsearch query
 	esQuery := r.buildSearchQuery(query, filter)
@@ -59,9 +60,12 @@ func (r *ElasticsearchStarterRepository) Search(
 		r.client.Search.WithSize(pg.Limit),
 	)
 	if err != nil {
+		defer res.Body.Close()
+	}
+
+	if err != nil {
 		return nil, 0, fmt.Errorf("error executing search: %w", err)
 	}
-	defer res.Body.Close()
 
 	if res.IsError() {
 		return nil, 0, fmt.Errorf("elasticsearch error: %s", res.String())
@@ -79,7 +83,7 @@ func (r *ElasticsearchStarterRepository) Search(
 	documents := hits["hits"].([]interface{})
 
 	// Convert to domain entities
-	starters := make([]*starterDomain.Starter, len(documents))
+	starters := make([]*starterAggregate.Starter, len(documents))
 	for i, doc := range documents {
 		source := doc.(map[string]interface{})["_source"].(map[string]interface{})
 		starters[i] = r.toDomain(source)
@@ -89,7 +93,7 @@ func (r *ElasticsearchStarterRepository) Search(
 }
 
 // IndexStarter indexes a single starter document
-func (r *ElasticsearchStarterRepository) IndexStarter(ctx context.Context, starter *starterDomain.Starter) error {
+func (r *ElasticsearchStarterRepository) IndexStarter(ctx context.Context, starter *starterAggregate.Starter) error {
 	doc := r.toDocument(starter)
 	doc.IndexedAt = time.Now()
 
@@ -156,7 +160,7 @@ func (r *ElasticsearchStarterRepository) DeleteFromIndex(ctx context.Context, do
 }
 
 // BulkIndex indexes multiple starters in bulk (for initial indexing or reindexing)
-func (r *ElasticsearchStarterRepository) BulkIndex(ctx context.Context, starters []*starterDomain.Starter) error {
+func (r *ElasticsearchStarterRepository) BulkIndex(ctx context.Context, starters []*starterAggregate.Starter) error {
 	if len(starters) == 0 {
 		return nil
 	}
@@ -208,7 +212,7 @@ func (r *ElasticsearchStarterRepository) BulkIndex(ctx context.Context, starters
 
 // buildSearchQuery builds Elasticsearch query DSL
 func (r *ElasticsearchStarterRepository) buildSearchQuery(
-	query string, filter starterDomain.ListFilter,
+	query string, filter starterPort.ListFilter,
 ) map[string]interface{} {
 	var must []interface{}
 
@@ -266,7 +270,7 @@ func (r *ElasticsearchStarterRepository) buildSearchQuery(
 }
 
 // toDocument converts domain Starter to Elasticsearch document
-func (r *ElasticsearchStarterRepository) toDocument(starter *starterDomain.Starter) *StarterDocument {
+func (r *ElasticsearchStarterRepository) toDocument(starter *starterAggregate.Starter) *StarterDocument {
 	// Build full text for search
 	fullText := strings.Join([]string{
 		starter.Domain(),
@@ -302,7 +306,7 @@ func (r *ElasticsearchStarterRepository) toDocument(starter *starterDomain.Start
 }
 
 // toDomain converts Elasticsearch document to domain Starter
-func (r *ElasticsearchStarterRepository) toDomain(source map[string]interface{}) *starterDomain.Starter {
+func (r *ElasticsearchStarterRepository) toDomain(source map[string]interface{}) *starterAggregate.Starter {
 	id := int64(source["id"].(float64))
 	domain := source["domain"].(string)
 
@@ -330,7 +334,7 @@ func (r *ElasticsearchStarterRepository) toDomain(source map[string]interface{})
 	createdAt, _ := time.Parse(time.RFC3339, source["created_at"].(string))
 	updatedAt, _ := time.Parse(time.RFC3339, source["updated_at"].(string))
 
-	return starterDomain.RehydrateStarter(
+	return starterAggregate.Rehydrate(
 		id,
 		domain,
 		name,
