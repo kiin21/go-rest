@@ -107,7 +107,7 @@ func (s *StarterSearchService) DeleteFromIndex(ctx context.Context, domain strin
 		Retries:   0,
 	}
 
-	return s.kafkaProducer.PublishSyncEvent(ctx, event)
+	return s.kafkaProducer.PublishSyncEvent(event)
 }
 
 // ReindexAll reindexes all starters (for initial setup or data migration)

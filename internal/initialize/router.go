@@ -14,7 +14,7 @@ import (
 	"github.com/kiin21/go-rest/internal/middleware"
 	orgHttp "github.com/kiin21/go-rest/internal/organization/presentation/http"
 	messagingKafka "github.com/kiin21/go-rest/internal/shared/infrastructure/messagebroker/kafka"
-	starterRepository "github.com/kiin21/go-rest/internal/starter/infrastructure/persistence/repository"
+	starterRepository "github.com/kiin21/go-rest/internal/starter/infrastructure/persistence/repository/mysql"
 	starterHttp "github.com/kiin21/go-rest/internal/starter/presentation/http"
 	"github.com/kiin21/go-rest/pkg/httpctx"
 	swaggerFiles "github.com/swaggo/files"

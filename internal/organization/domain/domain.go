@@ -45,7 +45,6 @@ type DepartmentWithDetails struct {
 	Leader           *LineManager
 	ParentDepartment *shareddomain.OrgDepartmentNested
 	Subdepartments   []*shareddomain.OrgDepartmentNested
-	MembersCount     int
 }
 
 type DepartmentNested = shareddomain.OrgDepartmentNested

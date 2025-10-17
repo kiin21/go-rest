@@ -1,7 +1,12 @@
 package application
 
-import "context"
+import (
+	"context"
+
+	"github.com/kiin21/go-rest/internal/starter/domain/aggregate"
+)
 
 type LeaderLookup interface {
-	FindLeaderIDByDomain(ctx context.Context, domain string) (int64, error)
+	FindStarterIDByDomain(ctx context.Context, domain string) (int64, error)
+	FindStarterById(ctx context.Context, id int64) (*aggregate.Starter, error)
 }

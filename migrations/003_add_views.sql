@@ -50,7 +50,6 @@ FROM dept_hierarchy;
 
 -- =============================================
 -- VIEW: v_departments_with_counts
--- Include members_count and subdepartments_count
 -- Requires: deleted_at column (added in 003_add_soft_delete.sql)
 -- =============================================
 CREATE
@@ -64,7 +63,6 @@ SELECT d.id,
        d.created_at,
        d.updated_at,
        d.deleted_at,
-       COUNT(DISTINCT s.id) AS members_count
 FROM departments d
          LEFT JOIN starters s ON s.department_id = d.id AND s.deleted_at IS NULL
          LEFT JOIN departments sd ON sd.group_department_id = d.id AND sd.deleted_at IS NULL

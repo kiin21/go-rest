@@ -28,8 +28,7 @@ type DepartmentNested struct {
 }
 
 type OrgDepartmentNested struct {
-	ID           int64
-	FullName     string
-	Shortname    string
-	MembersCount int
+	ID        int64
+	FullName  string
+	Shortname string
 }

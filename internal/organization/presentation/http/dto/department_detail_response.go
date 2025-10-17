@@ -7,35 +7,31 @@ import (
 )
 
 type DepartmentDetailResponse struct {
-	ID                  int64               `json:"id"`
-	FullName            string              `json:"full_name"`
-	Shortname           string              `json:"shortname"`
-	BusinessUnit        *BusinessUnitNested `json:"business_unit,omitempty"`
-	Leader              *LeaderNested       `json:"leader,omitempty"`
-	ParentDepartment    *DepartmentNested   `json:"parent_department,omitempty"`
-	Subdepartments      []*DepartmentNested `json:"subdepartments,omitempty"`
-	MembersCount        int                 `json:"members_count"`
-	SubdepartmentsCount int                 `json:"subdepartments_count"`
-	CreatedAt           time.Time           `json:"created_at"`
-	UpdatedAt           time.Time           `json:"updated_at"`
+	ID               int64               `json:"id"`
+	FullName         string              `json:"full_name"`
+	Shortname        string              `json:"shortname"`
+	BusinessUnit     *BusinessUnitNested `json:"business_unit,omitempty"`
+	Leader           *LeaderNested       `json:"leader,omitempty"`
+	ParentDepartment *DepartmentNested   `json:"parent_department,omitempty"`
+	Subdepartments   []*DepartmentNested `json:"subdepartments,omitempty"`
+	CreatedAt        time.Time           `json:"created_at"`
+	UpdatedAt        time.Time           `json:"updated_at"`
 }
 
 // DepartmentNested represents a nested department object in a response.
 type DepartmentNested struct {
-	ID           int64  `json:"id"`
-	FullName     string `json:"full_name"`
-	Shortname    string `json:"shortname"`
-	MembersCount int    `json:"members_count"`
+	ID        int64  `json:"id"`
+	FullName  string `json:"full_name"`
+	Shortname string `json:"shortname"`
 }
 
 func FromDomainWithDetails(dept *domain.DepartmentWithDetails) *DepartmentDetailResponse {
 	response := &DepartmentDetailResponse{
-		ID:           dept.ID,
-		FullName:     dept.FullName,
-		Shortname:    dept.Shortname,
-		MembersCount: dept.MembersCount,
-		CreatedAt:    dept.CreatedAt,
-		UpdatedAt:    dept.UpdatedAt,
+		ID:        dept.ID,
+		FullName:  dept.FullName,
+		Shortname: dept.Shortname,
+		CreatedAt: dept.CreatedAt,
+		UpdatedAt: dept.UpdatedAt,
 	}
 
 	if dept.BusinessUnit != nil {

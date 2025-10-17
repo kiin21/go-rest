@@ -33,8 +33,7 @@ type DepartmentNested struct {
 
 // OrgDepartmentNested represents a nested department within the organization context.
 type OrgDepartmentNested struct {
-	ID           int64  `json:"id"`
-	FullName     string `json:"full_name"`
-	Shortname    string `json:"shortname"`
-	MembersCount int    `json:"members_count"`
+	ID        int64  `json:"id"`
+	FullName  string `json:"full_name"`
+	Shortname string `json:"shortname"`
 }

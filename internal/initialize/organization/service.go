@@ -4,7 +4,7 @@ import (
 	"github.com/kiin21/go-rest/internal/composition"
 	orgApplication "github.com/kiin21/go-rest/internal/organization/application"
 	orgDomain "github.com/kiin21/go-rest/internal/organization/domain"
-	orgRepository "github.com/kiin21/go-rest/internal/organization/infrastructure/persistence/repository"
+	"github.com/kiin21/go-rest/internal/organization/infrastructure/persistence/repository/mysql"
 	orgHttp "github.com/kiin21/go-rest/internal/organization/presentation/http"
 	"github.com/kiin21/go-rest/internal/starter/domain/port"
 	"github.com/kiin21/go-rest/pkg/httpctx"
@@ -16,8 +16,8 @@ func InitOrganization(
 	requestURLResolver httpctx.RequestURLResolver,
 	starterRepo port.StarterRepository,
 ) (*orgHttp.OrganizationHandler, orgDomain.DepartmentRepository) {
-	departmentRepo := orgRepository.NewMySQLDepartmentRepository(db)
-	businessUnitRepo := orgRepository.NewMySQLBusinessUnitRepository(db)
+	departmentRepo := mysql.NewMySQLDepartmentRepository(db)
+	businessUnitRepo := mysql.NewMySQLBusinessUnitRepository(db)
 
 	leaderLookup := composition.NewStarterLeaderLookup(starterRepo)
 

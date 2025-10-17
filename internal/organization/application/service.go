@@ -75,7 +75,7 @@ func (s *OrganizationApplicationService) GetAllDepartments(
 func (s *OrganizationApplicationService) GetOneDepartment(
 	ctx context.Context,
 	query appDto.GetDepartmentQuery,
-) ([]*domain.DepartmentWithDetails, error) {
+) (*domain.DepartmentWithDetails, error) {
 	ids := make([]int64, 0, 1)
 	ids = append(ids, query.ID)
 
@@ -84,12 +84,27 @@ func (s *OrganizationApplicationService) GetOneDepartment(
 		return nil, err
 	}
 
-	return departments, nil
+	if len(departments) > 1 {
+		return nil, response.NewAPIError(400, "Bad request", sharedDomain.ErrInvalidInput)
+	}
+
+	leader, err := s.leaderLookup.FindStarterById(ctx, *departments[0].LeaderID)
+	if err != nil {
+		return nil, response.NewAPIError(400, "Bad request", sharedDomain.ErrInvalidInput)
+	}
+	departments[0].Leader = &domain.LineManager{
+		ID:       leader.ID(),
+		Domain:   leader.Domain(),
+		Email:    leader.Email(),
+		JobTitle: leader.JobTitle(),
+		Name:     leader.Name(),
+	}
+
+	return departments[0], nil
 }
 
 // CreateDepartment creates a new department
 func (s *OrganizationApplicationService) CreateDepartment(ctx context.Context, cmd appDto.CreateDepartmentCommand) (*domain.DepartmentWithDetails, error) {
-	// Create domain entity
 	department := &domain.Department{
 		FullName:          cmd.FullName,
 		Shortname:         cmd.Shortname,
@@ -185,7 +200,7 @@ func (s *OrganizationApplicationService) AssignLeader(ctx context.Context, cmd a
 				return nil, response.NewAPIError(http.StatusNotImplemented, "starter lookup not configured", nil)
 			}
 
-			leaderID, err := s.leaderLookup.FindLeaderIDByDomain(ctx, *cmd.LeaderDomain)
+			leaderID, err := s.leaderLookup.FindStarterIDByDomain(ctx, *cmd.LeaderDomain)
 			if err != nil {
 				if errors.Is(err, sharedDomain.ErrNotFound) {
 					return nil, sharedDomain.ErrNotFound

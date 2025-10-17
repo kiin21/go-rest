@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -102,7 +101,6 @@ func (h *OrganizationHandler) ListDepartments(ctx *gin.Context) (res interface{}
 // @Router /departments/{id} [get]
 func (h *OrganizationHandler) GetDepartmentDetail(ctx *gin.Context) (res interface{}, err error) {
 	var req presentationDto.GetDepartmentRequest
-	fmt.Println("2345353sdgdfsgdsfgterwtr4: ", ctx.Request.RequestURI)
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		return nil, response.NewAPIError(http.StatusBadRequest, "Invalid query parameters", err.Error())
 	}
@@ -111,18 +109,13 @@ func (h *OrganizationHandler) GetDepartmentDetail(ctx *gin.Context) (res interfa
 		ID: req.ID,
 	}
 
-	results, svcErr := h.orgService.GetOneDepartment(ctx, *query)
+	result, svcErr := h.orgService.GetOneDepartment(ctx, *query)
 	if svcErr != nil {
 		return nil, svcErr
 	}
 
-	// Expecting one result for the given ID
-	if len(results) == 0 {
-		return nil, response.NewAPIError(http.StatusNotFound, "department not found", nil)
-	}
-
 	// Convert to response DTO
-	return presentationDto.FromDomainWithDetails(results[0]), nil
+	return presentationDto.FromDomainWithDetails(result), nil
 }
 
 // [GET]: /api/v1/business-units?page=1&limit=10

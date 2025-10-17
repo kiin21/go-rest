@@ -31,7 +31,7 @@ func NewConsumer(
 	handler func(context.Context, *messaging.SyncEvent) error,
 ) (*Consumer, error) {
 	config := sarama.NewConfig()
-	config.Consumer.Group.Rebalance.Strategies = []sarama.BalanceStrategy{sarama.BalanceStrategyRoundRobin}
+	config.Consumer.Group.Rebalance.Strategy = sarama.NewBalanceStrategyRoundRobin()
 	config.Consumer.Offsets.Initial = sarama.OffsetNewest
 	config.Consumer.Return.Errors = true
 

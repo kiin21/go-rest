@@ -1,4 +1,4 @@
-package repository
+package mysql
 
 import (
 	"context"
@@ -31,7 +31,6 @@ func (r *MySQLDepartmentRepository) ListWithDetails(
 		LeaderID          *int64 `gorm:"column:leader_id"`
 		GroupDepartmentID *int64 `gorm:"column:group_department_id"`
 		BusinessUnitID    *int64 `gorm:"column:business_unit_id"`
-		MembersCount      int    `gorm:"column:members_count"`
 		CreatedAt         string `gorm:"column:created_at"`
 		UpdatedAt         string `gorm:"column:updated_at"`
 	}
@@ -110,11 +109,11 @@ func (r *MySQLDepartmentRepository) ListWithDetails(
 		if err == nil {
 			for i := range buModels {
 				buMapById[buModels[i].ID] = &domain.BusinessUnit{
-					ID: buModels[i].ID,
-					Name: buModels[i].Name,
+					ID:        buModels[i].ID,
+					Name:      buModels[i].Name,
 					Shortname: buModels[i].Shortname,
 					CompanyID: buModels[i].CompanyID,
-					LeaderID: buModels[i].LeaderID,
+					LeaderID:  buModels[i].LeaderID,
 					CreatedAt: buModels[i].CreatedAt,
 					UpdatedAt: buModels[i].UpdatedAt,
 				}
@@ -132,7 +131,7 @@ func (r *MySQLDepartmentRepository) ListWithDetails(
 		}
 
 		err := r.db.WithContext(ctx).Table("v_departments_with_counts").
-			Select("id, full_name, shortname, members_count").
+			Select("id, full_name, shortname").
 			Where("id IN ?", parentIDList).
 			Find(&parents).Error
 
@@ -152,21 +151,19 @@ func (r *MySQLDepartmentRepository) ListWithDetails(
 			GroupDepartmentID int64  `gorm:"column:group_department_id"`
 			FullName          string `gorm:"column:full_name"`
 			Shortname         string `gorm:"column:shortname"`
-			MembersCount      int    `gorm:"column:members_count"`
 		}
 
 		var subdepts []Subdept
 
 		if err := r.db.WithContext(ctx).Table("v_departments_with_counts").
-			Select("id, group_department_id, full_name, shortname, members_count").
+			Select("id, group_department_id, full_name, shortname").
 			Where("group_department_id IN ?", deptIDs).
 			Find(&subdepts).Error; err == nil {
 			for _, sd := range subdepts {
 				subdeptsMap[sd.GroupDepartmentID] = append(subdeptsMap[sd.GroupDepartmentID], &domain.DepartmentNested{
-					ID:           sd.ID,
-					FullName:     sd.FullName,
-					Shortname:    sd.Shortname,
-					MembersCount: sd.MembersCount,
+					ID:        sd.ID,
+					FullName:  sd.FullName,
+					Shortname: sd.Shortname,
 				})
 			}
 		}
@@ -186,7 +183,6 @@ func (r *MySQLDepartmentRepository) ListWithDetails(
 
 		details := &domain.DepartmentWithDetails{
 			Department:     dept,
-			MembersCount:   d.MembersCount,
 			Subdepartments: subdeptsMap[d.ID],
 		}
 
@@ -233,12 +229,10 @@ func (r *MySQLDepartmentRepository) FindByIDsWithRelations(ctx context.Context, 
 		return nil, err
 	}
 
-	// Map to store departments for quick lookup
 	deptMap := make(map[int64]*ViewResult)
 	for i := range viewResults {
 		deptMap[viewResults[i].ID] = &viewResults[i]
 	}
-
 	// Collect group_department_id và business_unit_id cần load
 	groupDeptIDs := make(map[int64]bool)
 	buIDs := make(map[int64]bool)
@@ -300,16 +294,16 @@ func (r *MySQLDepartmentRepository) FindByIDsWithRelations(ctx context.Context, 
 				Shortname:         vr.Shortname,
 				GroupDepartmentID: vr.GroupDepartmentID,
 				BusinessUnitID:    vr.BusinessUnitID,
+				LeaderID:          vr.LeaderID,
 			},
 		}
 
 		if vr.GroupDepartmentID != nil {
 			if gd, ok := groupDeptMap[*vr.GroupDepartmentID]; ok {
 				rel.ParentDepartment = &sharedDomain.OrgDepartmentNested{
-					ID:           gd.ID,
-					FullName:     gd.FullName,
-					Shortname:    gd.Shortname,
-					MembersCount: 2107,
+					ID:        gd.ID,
+					FullName:  gd.FullName,
+					Shortname: gd.Shortname,
 				}
 			}
 		}
