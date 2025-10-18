@@ -28,9 +28,6 @@ type Config struct {
 	KafkaTopicSyncEvents string `mapstructure:"KAFKA_TOPIC_SYNC_EVENTS"`
 	KafkaConsumerGroup   string `mapstructure:"KAFKA_CONSUMER_GROUP"`
 
-	// HTTP metadata
-	PublicBaseURL string `mapstructure:"PUBLIC_BASE_URL"`
-
 	// DBDriver      string `mapstructure:"DB_DRIVER"`
 	// AppVersion    string `mapstructure:"APP_VERSION"`
 	// ServerAddress string `mapstructure:"SERVER_ADDRESS"`

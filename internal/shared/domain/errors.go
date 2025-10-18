@@ -6,7 +6,7 @@ import "errors"
 var (
 	ErrNotFound            = errors.New("resource not found")
 	ErrDuplicateEntry      = errors.New("duplicate entry")
-	ErrDomainAlreadyExists = errors.New("domain already exists") // Specific for starter domain uniqueness
+	ErrDomainAlreadyExists = errors.New("domain already exists")
 
 	ErrValidation   = errors.New("validation failed")
 	ErrInvalidInput = errors.New("invalid input")

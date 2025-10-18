@@ -3,7 +3,6 @@ package entity
 import (
 	"time"
 
-	sharedModel "github.com/kiin21/go-rest/internal/shared/infrastructure/persistence/model"
 	"gorm.io/gorm"
 )
 
@@ -18,8 +17,8 @@ type BusinessUnitModel struct {
 	UpdatedAt time.Time      `gorm:"column:updated_at;autoUpdateTime"`
 
 	// Relationships
-	Company *CompanyModel             `gorm:"foreignKey:CompanyID"`
-	Leader  *sharedModel.StarterModel `gorm:"foreignKey:LeaderID"`
+	Company *CompanyModel `gorm:"foreignKey:CompanyID"`
+	Leader  *StarterModel `gorm:"foreignKey:LeaderID"`
 }
 
 func (BusinessUnitModel) TableName() string {

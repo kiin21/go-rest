@@ -33,10 +33,10 @@ func Run() (*gin.Engine, string) {
 			Username:  cfg.ElasticsearchUsername,
 			Password:  cfg.ElasticsearchPassword,
 		}
+
 		esClient, err = initES.InitESClient(esConfig)
 		if err != nil {
 			log.Printf("Warning: Could not initialize Elasticsearch: %v", err)
-			log.Printf("Search functionality will be limited")
 			esClient = nil
 		}
 	}
@@ -46,7 +46,6 @@ func Run() (*gin.Engine, string) {
 		db,
 		esClient,
 		cfg.LogLevel,
-		cfg.PublicBaseURL,
 		cfg.KafkaBrokers,
 		cfg.KafkaTopicSyncEvents,
 		cfg.KafkaConsumerGroup,

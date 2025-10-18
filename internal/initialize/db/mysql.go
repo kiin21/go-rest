@@ -22,7 +22,7 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 
 	// GORM logger
 	newLogger := logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
+		log.New(os.Stdout, "\r\n", log.LstdFlags),
 		logger.Config{
 			SlowThreshold:             time.Second,
 			LogLevel:                  logger.Info,

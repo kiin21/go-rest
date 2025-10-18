@@ -3,9 +3,10 @@ package mysql
 import (
 	"context"
 
-	"github.com/kiin21/go-rest/internal/organization/domain"
+	"github.com/kiin21/go-rest/internal/organization/domain/model"
+	repo "github.com/kiin21/go-rest/internal/organization/domain/repository"
 	"github.com/kiin21/go-rest/internal/organization/infrastructure/persistence/entity"
-	sharedDomain "github.com/kiin21/go-rest/internal/shared/domain"
+	sharedModel "github.com/kiin21/go-rest/internal/shared/domain/model"
 	"github.com/kiin21/go-rest/pkg/response"
 	"gorm.io/gorm"
 )
@@ -14,15 +15,15 @@ type MySQLDepartmentRepository struct {
 	db *gorm.DB
 }
 
-func NewMySQLDepartmentRepository(db *gorm.DB) domain.DepartmentRepository {
+func NewMySQLDepartmentRepository(db *gorm.DB) repo.DepartmentRepository {
 	return &MySQLDepartmentRepository{db: db}
 }
 
 func (r *MySQLDepartmentRepository) ListWithDetails(
 	ctx context.Context,
-	filter domain.DepartmentListFilter,
+	filter model.DepartmentListFilter,
 	pg response.ReqPagination,
-) ([]*domain.DepartmentWithDetails, int64, error) {
+) ([]*model.DepartmentWithDetails, int64, error) {
 	// View struct
 	type DeptWithCounts struct {
 		ID                int64  `gorm:"column:id"`
@@ -75,9 +76,9 @@ func (r *MySQLDepartmentRepository) ListWithDetails(
 	}
 
 	// Batch load leaders
-	leaderMapById := make(map[int64]*domain.LineManager)
+	leaderMapById := make(map[int64]*sharedModel.LineManagerNested)
 	if len(leaderIDs) > 0 {
-		var leaders []domain.LineManager
+		var leaders []sharedModel.LineManagerNested
 		leaderIDList := make([]int64, 0, len(leaderIDs))
 		for id := range leaderIDs {
 			leaderIDList = append(leaderIDList, id)
@@ -96,7 +97,7 @@ func (r *MySQLDepartmentRepository) ListWithDetails(
 	}
 
 	// Batch load business units
-	buMapById := make(map[int64]*domain.BusinessUnit)
+	buMapById := make(map[int64]*model.BusinessUnit)
 	if len(businessUnitIDs) > 0 {
 		var buModels []entity.BusinessUnitModel
 		buIDList := make([]int64, 0, len(businessUnitIDs))
@@ -108,7 +109,7 @@ func (r *MySQLDepartmentRepository) ListWithDetails(
 			Find(&buModels).Error
 		if err == nil {
 			for i := range buModels {
-				buMapById[buModels[i].ID] = &domain.BusinessUnit{
+				buMapById[buModels[i].ID] = &model.BusinessUnit{
 					ID:        buModels[i].ID,
 					Name:      buModels[i].Name,
 					Shortname: buModels[i].Shortname,
@@ -122,9 +123,9 @@ func (r *MySQLDepartmentRepository) ListWithDetails(
 	}
 
 	// Batch load parent departments
-	parentDeptMap := make(map[int64]*domain.DepartmentNested)
+	parentDeptMap := make(map[int64]*sharedModel.OrgDepartmentNested)
 	if len(parentDeptIDs) > 0 {
-		var parents []sharedDomain.OrgDepartmentNested
+		var parents []sharedModel.OrgDepartmentNested
 		parentIDList := make([]int64, 0, len(parentDeptIDs))
 		for id := range parentDeptIDs {
 			parentIDList = append(parentIDList, id)
@@ -143,7 +144,7 @@ func (r *MySQLDepartmentRepository) ListWithDetails(
 	}
 
 	// Batch load subdepartments
-	subdeptsMap := make(map[int64][]*sharedDomain.OrgDepartmentNested)
+	subdeptsMap := make(map[int64][]*sharedModel.OrgDepartmentNested)
 	if len(deptIDs) > 0 {
 
 		type Subdept struct {
@@ -160,7 +161,7 @@ func (r *MySQLDepartmentRepository) ListWithDetails(
 			Where("group_department_id IN ?", deptIDs).
 			Find(&subdepts).Error; err == nil {
 			for _, sd := range subdepts {
-				subdeptsMap[sd.GroupDepartmentID] = append(subdeptsMap[sd.GroupDepartmentID], &domain.DepartmentNested{
+				subdeptsMap[sd.GroupDepartmentID] = append(subdeptsMap[sd.GroupDepartmentID], &sharedModel.OrgDepartmentNested{
 					ID:        sd.ID,
 					FullName:  sd.FullName,
 					Shortname: sd.Shortname,
@@ -170,9 +171,9 @@ func (r *MySQLDepartmentRepository) ListWithDetails(
 	}
 
 	// Assemble result
-	results := make([]*domain.DepartmentWithDetails, len(deptsWithCounts))
+	results := make([]*model.DepartmentWithDetails, len(deptsWithCounts))
 	for i, d := range deptsWithCounts {
-		dept := &domain.Department{
+		dept := &model.Department{
 			ID:                d.ID,
 			GroupDepartmentID: d.GroupDepartmentID,
 			FullName:          d.FullName,
@@ -181,7 +182,7 @@ func (r *MySQLDepartmentRepository) ListWithDetails(
 			LeaderID:          d.LeaderID,
 		}
 
-		details := &domain.DepartmentWithDetails{
+		details := &model.DepartmentWithDetails{
 			Department:     dept,
 			Subdepartments: subdeptsMap[d.ID],
 		}
@@ -204,24 +205,27 @@ func (r *MySQLDepartmentRepository) ListWithDetails(
 	return results, total, nil
 }
 
-func (r *MySQLDepartmentRepository) FindByIDsWithRelations(ctx context.Context, ids []int64) ([]*domain.DepartmentWithDetails, error) {
+func (r *MySQLDepartmentRepository) FindByIDsWithDetails(
+	ctx context.Context,
+	ids []int64,
+) ([]*model.DepartmentWithDetails, error) {
 	if len(ids) == 0 {
-		return []*domain.DepartmentWithDetails{}, nil
+		return []*model.DepartmentWithDetails{}, nil
 	}
 
 	// View struct
 	type ViewResult struct {
 		ID                int64  `gorm:"column:id"`
-		GroupDepartmentID *int64 `gorm:"column:group_department_id"`
 		FullName          string `gorm:"column:full_name"`
 		Shortname         string `gorm:"column:shortname"`
-		BusinessUnitID    *int64 `gorm:"column:business_unit_id"` // Auto-resolved from view
+		GroupDepartmentID *int64 `gorm:"column:group_department_id"`
+		BusinessUnitID    *int64 `gorm:"column:business_unit_id"`
 		LeaderID          *int64 `gorm:"column:leader_id"`
 		CreatedAt         string `gorm:"column:created_at"`
 		UpdatedAt         string `gorm:"column:updated_at"`
 	}
-
 	var viewResults []ViewResult
+
 	if err := r.db.WithContext(ctx).
 		Table("v_departments_with_bu").
 		Where("id IN ?", ids).
@@ -229,13 +233,15 @@ func (r *MySQLDepartmentRepository) FindByIDsWithRelations(ctx context.Context, 
 		return nil, err
 	}
 
-	deptMap := make(map[int64]*ViewResult)
+	deptMapByDeptId := make(map[int64]*ViewResult)
 	for i := range viewResults {
-		deptMap[viewResults[i].ID] = &viewResults[i]
+		deptMapByDeptId[viewResults[i].ID] = &viewResults[i]
 	}
-	// Collect group_department_id và business_unit_id cần load
+
+	// Collect group_department_id và business_unit_id
 	groupDeptIDs := make(map[int64]bool)
 	buIDs := make(map[int64]bool)
+	leaderIDs := make(map[int64]bool)
 
 	for _, vr := range viewResults {
 		if vr.GroupDepartmentID != nil {
@@ -244,9 +250,12 @@ func (r *MySQLDepartmentRepository) FindByIDsWithRelations(ctx context.Context, 
 		if vr.BusinessUnitID != nil {
 			buIDs[*vr.BusinessUnitID] = true
 		}
+		if vr.LeaderID != nil {
+			leaderIDs[*vr.LeaderID] = true
+		}
 	}
 
-	groupDeptMap := make(map[int64]*domain.Department)
+	groupDeptMapByDeptId := make(map[int64]*model.Department)
 	if len(groupDeptIDs) > 0 {
 		var groupDeptModels []entity.DepartmentModel
 		gdIDs := make([]int64, 0, len(groupDeptIDs))
@@ -258,12 +267,12 @@ func (r *MySQLDepartmentRepository) FindByIDsWithRelations(ctx context.Context, 
 			Where("id IN ? AND deleted_at IS NULL", gdIDs).
 			Find(&groupDeptModels).Error; err == nil {
 			for _, gd := range groupDeptModels {
-				groupDeptMap[gd.ID] = r.toDomain(&gd)
+				groupDeptMapByDeptId[gd.ID] = r.toDomain(&gd)
 			}
 		}
 	}
 
-	buMap := make(map[int64]*domain.BusinessUnit)
+	buMapByBuId := make(map[int64]*model.BusinessUnit)
 	if len(buIDs) > 0 {
 		var buModels []entity.BusinessUnitModel
 		buIDList := make([]int64, 0, len(buIDs))
@@ -275,7 +284,7 @@ func (r *MySQLDepartmentRepository) FindByIDsWithRelations(ctx context.Context, 
 			Where("id IN ?", buIDList).
 			Find(&buModels).Error; err == nil {
 			for _, bu := range buModels {
-				buMap[bu.ID] = &domain.BusinessUnit{
+				buMapByBuId[bu.ID] = &model.BusinessUnit{
 					ID:        bu.ID,
 					Name:      bu.Name,
 					Shortname: bu.Shortname,
@@ -284,11 +293,34 @@ func (r *MySQLDepartmentRepository) FindByIDsWithRelations(ctx context.Context, 
 		}
 	}
 
+	leaderMapByLeaderId := make(map[int64]*sharedModel.LineManagerNested)
+	if len(leaderIDs) > 0 {
+		var leaderModels []entity.StarterModel
+		leaderIDList := make([]int64, 0, len(leaderIDs))
+		for id := range leaderIDs {
+			leaderIDList = append(leaderIDList, id)
+		}
+
+		if err := r.db.WithContext(ctx).
+			Where("id IN ?", leaderIDList).
+			Find(&leaderModels).Error; err == nil {
+			for _, l := range leaderModels {
+				leaderMapByLeaderId[l.ID] = &sharedModel.LineManagerNested{
+					ID:       l.ID,
+					Domain:   l.Domain,
+					Name:     l.Name,
+					Email:    l.Email,
+					JobTitle: l.JobTitle,
+				}
+			}
+		}
+	}
+
 	// Assemble final result
-	relations := make([]*domain.DepartmentWithDetails, 0, len(viewResults))
+	relations := make([]*model.DepartmentWithDetails, 0, len(viewResults))
 	for _, vr := range viewResults {
-		rel := &domain.DepartmentWithDetails{
-			Department: &domain.Department{
+		rel := &model.DepartmentWithDetails{
+			Department: &model.Department{
 				ID:                vr.ID,
 				FullName:          vr.FullName,
 				Shortname:         vr.Shortname,
@@ -299,8 +331,8 @@ func (r *MySQLDepartmentRepository) FindByIDsWithRelations(ctx context.Context, 
 		}
 
 		if vr.GroupDepartmentID != nil {
-			if gd, ok := groupDeptMap[*vr.GroupDepartmentID]; ok {
-				rel.ParentDepartment = &sharedDomain.OrgDepartmentNested{
+			if gd, ok := groupDeptMapByDeptId[*vr.GroupDepartmentID]; ok {
+				rel.ParentDepartment = &sharedModel.OrgDepartmentNested{
 					ID:        gd.ID,
 					FullName:  gd.FullName,
 					Shortname: gd.Shortname,
@@ -309,8 +341,14 @@ func (r *MySQLDepartmentRepository) FindByIDsWithRelations(ctx context.Context, 
 		}
 
 		if vr.BusinessUnitID != nil {
-			if bu, ok := buMap[*vr.BusinessUnitID]; ok {
+			if bu, ok := buMapByBuId[*vr.BusinessUnitID]; ok {
 				rel.BusinessUnit = bu
+			}
+		}
+
+		if vr.LeaderID != nil {
+			if lm, ok := leaderMapByLeaderId[*vr.LeaderID]; ok {
+				rel.Leader = lm
 			}
 		}
 
@@ -320,7 +358,7 @@ func (r *MySQLDepartmentRepository) FindByIDsWithRelations(ctx context.Context, 
 	return relations, nil
 }
 
-func (r *MySQLDepartmentRepository) Create(ctx context.Context, department *domain.Department) error {
+func (r *MySQLDepartmentRepository) Create(ctx context.Context, department *model.Department) error {
 	_model := &entity.DepartmentModel{
 		GroupDepartmentID: department.GroupDepartmentID,
 		FullName:          department.FullName,
@@ -340,7 +378,7 @@ func (r *MySQLDepartmentRepository) Create(ctx context.Context, department *doma
 	return nil
 }
 
-func (r *MySQLDepartmentRepository) Update(ctx context.Context, department *domain.Department) error {
+func (r *MySQLDepartmentRepository) Update(ctx context.Context, department *model.Department) error {
 	model := &entity.DepartmentModel{
 		ID:                department.ID,
 		GroupDepartmentID: department.GroupDepartmentID,
@@ -359,16 +397,16 @@ func (r *MySQLDepartmentRepository) Update(ctx context.Context, department *doma
 	return nil
 }
 
-func (r *MySQLDepartmentRepository) toDomain(model *entity.DepartmentModel) *domain.Department {
-	return &domain.Department{
-		ID:                model.ID,
-		GroupDepartmentID: model.GroupDepartmentID,
-		FullName:          model.FullName,
-		Shortname:         model.Shortname,
-		BusinessUnitID:    model.BusinessUnitID,
-		LeaderID:          model.LeaderID,
-		CreatedAt:         model.CreatedAt,
-		UpdatedAt:         model.UpdatedAt,
-		DeletedAt:         model.DeletedAt,
+func (r *MySQLDepartmentRepository) toDomain(dm *entity.DepartmentModel) *model.Department {
+	return &model.Department{
+		ID:                dm.ID,
+		GroupDepartmentID: dm.GroupDepartmentID,
+		FullName:          dm.FullName,
+		Shortname:         dm.Shortname,
+		BusinessUnitID:    dm.BusinessUnitID,
+		LeaderID:          dm.LeaderID,
+		CreatedAt:         dm.CreatedAt,
+		UpdatedAt:         dm.UpdatedAt,
+		DeletedAt:         dm.DeletedAt,
 	}
 }

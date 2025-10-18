@@ -1,42 +1,46 @@
-# Build stage
+# ---------- Build stage ----------
 FROM golang:1.25.1-alpine AS builder
 
-# Install git and other dependencies
-RUN apk add --no-cache git ca-certificates tzdata
+# Install git and timezone data
+RUN apk add --no-cache git ca-certificates tzdata build-base
 
 # Set working directory
 WORKDIR /app
 
-# Copy go mod files
+# Copy go.mod & go.sum
 COPY go.mod go.sum ./
 
 # Download dependencies
 RUN go mod download
 
-# Copy source code
+# Copy all source
 COPY . .
 
-# Build the application
+# Install swag CLI
 RUN go install github.com/swaggo/swag/cmd/swag@latest
-RUN swag init -g cmd/api/main.go
+
+# Generate Swagger docs
+RUN $(go env GOPATH)/bin/swag init \
+    -g cmd/api/main.go \
+    -o docs \
+    --parseDependency --parseInternal --parseDepth 10
+
+# Build application binary
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/api/main.go
 
-# Final stage
+# ---------- Runtime stage ----------
 FROM alpine:latest
 
-# Install ca-certificates for HTTPS
+# Install CA certificates and timezone data
 RUN apk --no-cache add ca-certificates tzdata
 
 WORKDIR /root/
 
-# Copy the binary from builder
+# Copy binary & docs from builder
 COPY --from=builder /app/main .
-
-# Copy environment file
+COPY --from=builder /app/docs ./docs
 COPY --from=builder /app/.env_dev .env_dev
 
-# Expose port
 EXPOSE 3000
 
-# Run the application
 CMD ["./main"]

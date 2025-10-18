@@ -1,0 +1,108 @@
+package repository
+
+// starterIndexName is the Elasticsearch index name for starter documents.
+const starterIndexName = "starters"
+
+// IndexMappingJSON holds the Elasticsearch mapping definition for starters.
+const IndexMappingJSON = `
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 1,
+    "analysis": {
+      "analyzer": {
+        "starter_analyzer": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": ["lowercase", "asciifolding", "starter_edge_ngram"]
+        },
+        "starter_search_analyzer": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": ["lowercase", "asciifolding"]
+        }
+      },
+      "filter": {
+        "starter_edge_ngram": {
+          "type": "edge_ngram",
+          "min_gram": 2,
+          "max_gram": 10
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "id": {
+        "type": "long"
+      },
+      "domain": {
+        "type": "text",
+        "analyzer": "starter_analyzer",
+        "search_analyzer": "starter_search_analyzer",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "email": {
+        "type": "text",
+        "analyzer": "starter_analyzer",
+        "search_analyzer": "starter_search_analyzer",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "mobile": {
+        "type": "text",
+        "analyzer": "starter_analyzer",
+        "search_analyzer": "starter_search_analyzer",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "work_phone": {
+        "type": "text"
+      },
+      "job_title": {
+        "type": "text",
+        "analyzer": "starter_analyzer",
+        "search_analyzer": "starter_search_analyzer",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "department_id": {
+        "type": "long"
+      },
+      "line_manager_id": {
+        "type": "long"
+      },
+      "full_text": {
+        "type": "text",
+        "analyzer": "starter_analyzer",
+        "search_analyzer": "starter_search_analyzer"
+      },
+      "search_tokens": {
+        "type": "keyword"
+      },
+      "created_at": {
+        "type": "date"
+      },
+      "updated_at": {
+        "type": "date"
+      },
+      "indexed_at": {
+        "type": "date"
+      }
+    }
+  }
+}
+`
