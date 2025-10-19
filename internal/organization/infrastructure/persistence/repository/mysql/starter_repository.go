@@ -31,7 +31,7 @@ func (r *StarterRepository) FindByID(ctx context.Context, id int64) (*model.Star
 		return nil, err
 	}
 
-	return r.toModel(&starterEntity), nil
+	return r.toModel(&starterEntity)
 }
 
 func (r *StarterRepository) FindByDomain(ctx context.Context, domain string) (*model.Starter, error) {
@@ -44,7 +44,7 @@ func (r *StarterRepository) FindByDomain(ctx context.Context, domain string) (*m
 		return nil, err
 	}
 
-	return r.toModel(&starterEntity), nil
+	return r.toModel(&starterEntity)
 }
 
 func (r *StarterRepository) List(ctx context.Context, filter model.StarterListFilter, pg response.ReqPagination) ([]*model.Starter, int64, error) {
@@ -77,9 +77,13 @@ func (r *StarterRepository) List(ctx context.Context, filter model.StarterListFi
 		return nil, 0, err
 	}
 
-	starters := make([]*model.Starter, len(models))
-	for i, starterEntity := range models {
-		starters[i] = r.toModel(&starterEntity)
+	starters := make([]*model.Starter, 0, len(models))
+	for i := range models {
+		starterModel, err := r.toModel(&models[i])
+		if err != nil {
+			return nil, 0, err
+		}
+		starters = append(starters, starterModel)
 	}
 
 	return starters, total, nil
@@ -119,9 +123,13 @@ func (r *StarterRepository) SearchByKeyword(ctx context.Context, keyword string,
 		return nil, 0, err
 	}
 
-	starters := make([]*model.Starter, len(models))
-	for i, starterEntity := range models {
-		starters[i] = r.toModel(&starterEntity)
+	starters := make([]*model.Starter, 0, len(models))
+	for i := range models {
+		starterModel, err := r.toModel(&models[i])
+		if err != nil {
+			return nil, 0, err
+		}
+		starters = append(starters, starterModel)
 	}
 
 	return starters, total, nil
@@ -145,7 +153,7 @@ func (r *StarterRepository) SoftDelete(ctx context.Context, domain string) error
 }
 
 // Helper methods for domain conversion
-func (r *StarterRepository) toModel(sm *entity.StarterEntity) *model.Starter {
+func (r *StarterRepository) toModel(sm *entity.StarterEntity) (*model.Starter, error) {
 	return model.Rehydrate(
 		sm.ID,
 		sm.Domain,

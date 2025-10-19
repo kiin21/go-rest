@@ -73,10 +73,14 @@ func (r *ElasticsearchStarterRepository) Search(
 	documents := hits["hits"].([]interface{})
 
 	// Convert to domain entities
-	starters := make([]*model.Starter, len(documents))
-	for i, doc := range documents {
+	starters := make([]*model.Starter, 0, len(documents))
+	for _, doc := range documents {
 		source := doc.(map[string]interface{})["_source"].(map[string]interface{})
-		starters[i] = r.toDomain(source)
+		starter, err := r.toDomain(source)
+		if err != nil {
+			return nil, 0, err
+		}
+		starters = append(starters, starter)
 	}
 
 	return starters, total, nil
@@ -292,7 +296,7 @@ func (r *ElasticsearchStarterRepository) toDocument(starter *model.Starter) *Sta
 }
 
 // toDomain converts Elasticsearch document to domain Starter
-func (r *ElasticsearchStarterRepository) toDomain(source map[string]interface{}) *model.Starter {
+func (r *ElasticsearchStarterRepository) toDomain(source map[string]interface{}) (*model.Starter, error) {
 	id := int64(source["id"].(float64))
 	domain := source["domain"].(string)
 

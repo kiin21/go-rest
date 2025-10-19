@@ -190,7 +190,9 @@ func (s *StarterApplicationService) UpdateStarter(ctx context.Context, command s
 		lineManagerID = command.LineManagerID
 	}
 
-	starter.UpdateInfo(name, email, mobile, workPhone, jobTitle, departmentID, lineManagerID)
+	if err := starter.UpdateInfo(name, email, mobile, workPhone, jobTitle, departmentID, lineManagerID); err != nil {
+		return nil, err
+	}
 
 	if err := s.repo.Update(ctx, starter); err != nil {
 		return nil, err

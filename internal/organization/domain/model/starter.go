@@ -3,6 +3,8 @@ package model
 import (
 	"errors"
 	"time"
+
+	valueobject "github.com/kiin21/go-rest/internal/organization/domain/valueobject"
 )
 
 type StarterListFilter struct {
@@ -15,7 +17,7 @@ type Starter struct {
 	id            int64
 	domain        string
 	name          string
-	email         string
+	email         valueobject.Email
 	mobile        string
 	workPhone     string
 	jobTitle      string
@@ -39,11 +41,16 @@ func NewStarter(domain, name, email, mobile, workPhone, jobTitle string, departm
 		return nil, errors.New("job title is required")
 	}
 
+	emailVO, err := valueobject.NewEmail(email)
+	if err != nil {
+		return nil, err
+	}
+
 	now := time.Now()
 	return &Starter{
 		domain:        domain,
 		name:          name,
-		email:         email,
+		email:         emailVO,
 		mobile:        mobile,
 		workPhone:     workPhone,
 		jobTitle:      jobTitle,
@@ -56,22 +63,27 @@ func NewStarter(domain, name, email, mobile, workPhone, jobTitle string, departm
 
 func Rehydrate(
 	id int64,
-	domain,
-	name,
-	email,
-	mobile,
-	workPhone,
+	domain string,
+	name string,
+	email string,
+	mobile string,
+	workPhone string,
 	jobTitle string,
-	departmentID,
+	departmentID *int64,
 	lineManagerID *int64,
-	createdAt,
+	createdAt time.Time,
 	updatedAt time.Time,
-) *Starter {
+) (*Starter, error) {
+	emailVO, err := valueobject.NewEmail(email)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Starter{
 		id:            id,
 		domain:        domain,
 		name:          name,
-		email:         email,
+		email:         emailVO,
 		mobile:        mobile,
 		workPhone:     workPhone,
 		jobTitle:      jobTitle,
@@ -79,7 +91,7 @@ func Rehydrate(
 		lineManagerID: lineManagerID,
 		createdAt:     createdAt,
 		updatedAt:     updatedAt,
-	}
+	}, nil
 }
 
 func (s *Starter) ID() int64 { return s.id }
@@ -88,7 +100,7 @@ func (s *Starter) Domain() string { return s.domain }
 
 func (s *Starter) Name() string { return s.name }
 
-func (s *Starter) Email() string { return s.email }
+func (s *Starter) Email() string { return s.email.Value() }
 
 func (s *Starter) Mobile() string { return s.mobile }
 
@@ -104,13 +116,20 @@ func (s *Starter) CreatedAt() time.Time { return s.createdAt }
 
 func (s *Starter) UpdatedAt() time.Time { return s.updatedAt }
 
-func (s *Starter) UpdateInfo(name, email, mobile, workPhone, jobTitle string, departmentID, lineManagerID *int64) {
+func (s *Starter) UpdateInfo(name, email, mobile, workPhone, jobTitle string, departmentID, lineManagerID *int64) error {
+	emailVO, err := valueobject.NewEmail(email)
+	if err != nil {
+		return err
+	}
+
 	s.name = name
-	s.email = email
+	s.email = emailVO
 	s.mobile = mobile
 	s.workPhone = workPhone
 	s.jobTitle = jobTitle
 	s.departmentID = departmentID
 	s.lineManagerID = lineManagerID
 	s.updatedAt = time.Now()
+
+	return nil
 }
