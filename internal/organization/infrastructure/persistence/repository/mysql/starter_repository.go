@@ -5,43 +5,25 @@ import (
 	"errors"
 	"time"
 
-	model "github.com/kiin21/go-rest/internal/organization/domain/model"
+	"github.com/kiin21/go-rest/internal/organization/domain/model"
 	repo "github.com/kiin21/go-rest/internal/organization/domain/repository"
+	"github.com/kiin21/go-rest/internal/organization/infrastructure/persistence/entity"
 	sharedDomain "github.com/kiin21/go-rest/internal/shared/domain"
 	"github.com/kiin21/go-rest/pkg/response"
 	"gorm.io/gorm"
 )
 
-type MySQLStarterRepository struct {
+type StarterRepository struct {
 	db *gorm.DB
 }
 
-func NewMySQLStarterRepository(db *gorm.DB) repo.StarterRepository {
-	return &MySQLStarterRepository{db: db}
+func NewStarterRepository(db *gorm.DB) repo.StarterRepository {
+	return &StarterRepository{db: db}
 }
 
-type StarterModel struct {
-	ID            int64      `gorm:"primaryKey;column:id"`
-	Domain        string     `gorm:"column:domain;uniqueIndex;not null"`
-	Name          string     `gorm:"column:name;not null"`
-	Email         string     `gorm:"column:email"`
-	Mobile        string     `gorm:"column:mobile;not null"`
-	WorkPhone     string     `gorm:"column:work_phone"`
-	JobTitle      string     `gorm:"column:job_title;not null"`
-	DepartmentID  *int64     `gorm:"column:department_id"`
-	LineManagerID *int64     `gorm:"column:line_manager_id"`
-	CreatedAt     time.Time  `gorm:"column:created_at;autoCreateTime"`
-	UpdatedAt     time.Time  `gorm:"column:updated_at;autoUpdateTime"`
-	DeletedAt     *time.Time `gorm:"column:deleted_at;index"`
-}
-
-func (StarterModel) TableName() string {
-	return "starters"
-}
-
-func (r *MySQLStarterRepository) FindByID(ctx context.Context, id int64) (*model.Starter, error) {
-	var model StarterModel
-	err := r.db.WithContext(ctx).Where("id = ? AND deleted_at IS NULL", id).First(&model).Error
+func (r *StarterRepository) FindByID(ctx context.Context, id int64) (*model.Starter, error) {
+	var starterEntity entity.StarterEntity
+	err := r.db.WithContext(ctx).Where("id = ? AND deleted_at IS NULL", id).First(&starterEntity).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, sharedDomain.ErrNotFound
@@ -49,12 +31,12 @@ func (r *MySQLStarterRepository) FindByID(ctx context.Context, id int64) (*model
 		return nil, err
 	}
 
-	return r.toDomainAggregate(&model), nil
+	return r.toModel(&starterEntity), nil
 }
 
-func (r *MySQLStarterRepository) FindByDomain(ctx context.Context, domain string) (*model.Starter, error) {
-	var model StarterModel
-	err := r.db.WithContext(ctx).Where("domain = ? AND deleted_at IS NULL", domain).First(&model).Error
+func (r *StarterRepository) FindByDomain(ctx context.Context, domain string) (*model.Starter, error) {
+	var starterEntity entity.StarterEntity
+	err := r.db.WithContext(ctx).Where("domain = ? AND deleted_at IS NULL", domain).First(&starterEntity).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, sharedDomain.ErrNotFound
@@ -62,11 +44,11 @@ func (r *MySQLStarterRepository) FindByDomain(ctx context.Context, domain string
 		return nil, err
 	}
 
-	return r.toDomainAggregate(&model), nil
+	return r.toModel(&starterEntity), nil
 }
 
-func (r *MySQLStarterRepository) List(ctx context.Context, filter model.StarterListFilter, pg response.ReqPagination) ([]*model.Starter, int64, error) {
-	query := r.db.WithContext(ctx).Model(&StarterModel{}).Where("deleted_at IS NULL")
+func (r *StarterRepository) List(ctx context.Context, filter model.StarterListFilter, pg response.ReqPagination) ([]*model.Starter, int64, error) {
+	query := r.db.WithContext(ctx).Model(&entity.StarterEntity{}).Where("deleted_at IS NULL")
 
 	// Apply filters
 	if filter.DepartmentID != nil {
@@ -90,21 +72,21 @@ func (r *MySQLStarterRepository) List(ctx context.Context, filter model.StarterL
 	offset := (pg.Page - 1) * pg.Limit
 	query = query.Offset(offset).Limit(pg.Limit)
 
-	var models []StarterModel
+	var models []entity.StarterEntity
 	if err := query.Find(&models).Error; err != nil {
 		return nil, 0, err
 	}
 
 	starters := make([]*model.Starter, len(models))
-	for i, model := range models {
-		starters[i] = r.toDomainAggregate(&model)
+	for i, starterEntity := range models {
+		starters[i] = r.toModel(&starterEntity)
 	}
 
 	return starters, total, nil
 }
 
-func (r *MySQLStarterRepository) SearchByKeyword(ctx context.Context, keyword string, filter model.StarterListFilter, pg response.ReqPagination) ([]*model.Starter, int64, error) {
-	query := r.db.WithContext(ctx).Model(&StarterModel{}).Where("deleted_at IS NULL")
+func (r *StarterRepository) SearchByKeyword(ctx context.Context, keyword string, filter model.StarterListFilter, pg response.ReqPagination) ([]*model.Starter, int64, error) {
+	query := r.db.WithContext(ctx).Model(&entity.StarterEntity{}).Where("deleted_at IS NULL")
 
 	// Apply keyword search
 	searchPattern := "%" + keyword + "%"
@@ -132,38 +114,38 @@ func (r *MySQLStarterRepository) SearchByKeyword(ctx context.Context, keyword st
 	offset := (pg.Page - 1) * pg.Limit
 	query = query.Offset(offset).Limit(pg.Limit)
 
-	var models []StarterModel
+	var models []entity.StarterEntity
 	if err := query.Find(&models).Error; err != nil {
 		return nil, 0, err
 	}
 
 	starters := make([]*model.Starter, len(models))
-	for i, model := range models {
-		starters[i] = r.toDomainAggregate(&model)
+	for i, starterEntity := range models {
+		starters[i] = r.toModel(&starterEntity)
 	}
 
 	return starters, total, nil
 }
 
-func (r *MySQLStarterRepository) Create(ctx context.Context, starter *model.Starter) error {
-	model := r.fromDomainAggregate(starter)
-	return r.db.WithContext(ctx).Create(model).Error
+func (r *StarterRepository) Create(ctx context.Context, starter *model.Starter) error {
+	domainAggregate := r.toEntity(starter)
+	return r.db.WithContext(ctx).Create(domainAggregate).Error
 }
 
-func (r *MySQLStarterRepository) Update(ctx context.Context, starter *model.Starter) error {
-	model := r.fromDomainAggregate(starter)
-	return r.db.WithContext(ctx).Save(model).Error
+func (r *StarterRepository) Update(ctx context.Context, starter *model.Starter) error {
+	domainAggregate := r.toEntity(starter)
+	return r.db.WithContext(ctx).Save(domainAggregate).Error
 }
 
-func (r *MySQLStarterRepository) SoftDelete(ctx context.Context, domain string) error {
+func (r *StarterRepository) SoftDelete(ctx context.Context, domain string) error {
 	now := time.Now()
-	return r.db.WithContext(ctx).Model(&StarterModel{}).
+	return r.db.WithContext(ctx).Model(&entity.StarterEntity{}).
 		Where("domain = ? AND deleted_at IS NULL", domain).
 		Update("deleted_at", now).Error
 }
 
 // Helper methods for domain conversion
-func (r *MySQLStarterRepository) toDomainAggregate(sm *StarterModel) *model.Starter {
+func (r *StarterRepository) toModel(sm *entity.StarterEntity) *model.Starter {
 	return model.Rehydrate(
 		sm.ID,
 		sm.Domain,
@@ -179,8 +161,8 @@ func (r *MySQLStarterRepository) toDomainAggregate(sm *StarterModel) *model.Star
 	)
 }
 
-func (r *MySQLStarterRepository) fromDomainAggregate(starter *model.Starter) *StarterModel {
-	return &StarterModel{
+func (r *StarterRepository) toEntity(starter *model.Starter) *entity.StarterEntity {
+	return &entity.StarterEntity{
 		ID:            starter.ID(),
 		Domain:        starter.Domain(),
 		Name:          starter.Name(),

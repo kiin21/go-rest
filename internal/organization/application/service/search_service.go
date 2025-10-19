@@ -6,8 +6,8 @@ import (
 	"time"
 
 	starterquery "github.com/kiin21/go-rest/internal/organization/application/dto/starter/query"
-	model "github.com/kiin21/go-rest/internal/organization/domain/model"
-	repository "github.com/kiin21/go-rest/internal/organization/domain/repository"
+	"github.com/kiin21/go-rest/internal/organization/domain/model"
+	"github.com/kiin21/go-rest/internal/organization/domain/repository"
 	messaging "github.com/kiin21/go-rest/internal/shared/infrastructure/messagebroker"
 	"github.com/kiin21/go-rest/internal/shared/infrastructure/messagebroker/kafka"
 	"github.com/kiin21/go-rest/pkg/response"

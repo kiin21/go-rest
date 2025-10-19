@@ -2,7 +2,7 @@ package entity
 
 import "time"
 
-type StarterModel struct {
+type StarterEntity struct {
 	ID            int64      `gorm:"column:id;primaryKey;autoIncrement"`
 	Domain        string     `gorm:"column:domain;type:varchar(25);uniqueIndex;not null"`
 	Name          string     `gorm:"column:name;type:varchar(255);not null"`
@@ -17,6 +17,6 @@ type StarterModel struct {
 	DeletedAt     *time.Time `gorm:"column:deleted_at;index"`
 }
 
-func (StarterModel) TableName() string {
+func (StarterEntity) TableName() string {
 	return "starters"
 }

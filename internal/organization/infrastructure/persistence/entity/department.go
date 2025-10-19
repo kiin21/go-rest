@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-type DepartmentModel struct {
+type DepartmentEntity struct {
 	ID                int64      `gorm:"column:id;primaryKey;autoIncrement"`
 	FullName          string     `gorm:"column:full_name;not null"`
 	Shortname         string     `gorm:"column:shortname;not null"`
@@ -16,6 +16,6 @@ type DepartmentModel struct {
 	UpdatedAt         time.Time  `gorm:"column:updated_at;autoUpdateTime"`
 }
 
-func (DepartmentModel) TableName() string {
+func (DepartmentEntity) TableName() string {
 	return "departments"
 }

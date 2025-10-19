@@ -48,9 +48,9 @@ func InitRouter(db *gorm.DB, esClient *elasticsearch.Client, isLogger string, ka
 		swaggerHandler(ctx)
 	})
 
-	starterRepo := orgInfra.NewMySQLStarterRepository(db)
-	businessUnitRepo := orgInfra.NewMySQLBusinessUnitRepository(db)
-	departmentRepo := orgInfra.NewMySQLDepartmentRepository(db)
+	starterRepo := orgInfra.NewStarterRepository(db)
+	businessUnitRepo := orgInfra.NewBusinessUnitRepository(db)
+	departmentRepo := orgInfra.NewDepartmentRepository(db)
 
 	orgHandler := initOrg.InitOrganization(requestURLResolver, starterRepo, departmentRepo, businessUnitRepo)
 	orgHttp.RegisterOrganizationRoutes(v1, orgHandler)

@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type BusinessUnitModel struct {
+type BusinessUnitEntity struct {
 	ID        int64          `gorm:"column:id;primaryKey;autoIncrement"`
 	Name      string         `gorm:"column:name;not null"`
 	Shortname string         `gorm:"column:shortname;not null"`
@@ -17,10 +17,10 @@ type BusinessUnitModel struct {
 	UpdatedAt time.Time      `gorm:"column:updated_at;autoUpdateTime"`
 
 	// Relationships
-	Company *CompanyModel `gorm:"foreignKey:CompanyID"`
-	Leader  *StarterModel `gorm:"foreignKey:LeaderID"`
+	Company *CompanyEntity `gorm:"foreignKey:CompanyID"`
+	Leader  *StarterEntity `gorm:"foreignKey:LeaderID"`
 }
 
-func (BusinessUnitModel) TableName() string {
+func (BusinessUnitEntity) TableName() string {
 	return "business_units"
 }

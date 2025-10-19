@@ -8,11 +8,11 @@ import (
 
 	startercommand "github.com/kiin21/go-rest/internal/organization/application/dto/starter/command"
 	starterquery "github.com/kiin21/go-rest/internal/organization/application/dto/starter/query"
-	model "github.com/kiin21/go-rest/internal/organization/domain/model"
+	"github.com/kiin21/go-rest/internal/organization/domain/model"
 	repo "github.com/kiin21/go-rest/internal/organization/domain/repository"
 	domainService "github.com/kiin21/go-rest/internal/organization/domain/service"
 	sharedDomain "github.com/kiin21/go-rest/internal/shared/domain"
-	response "github.com/kiin21/go-rest/pkg/response"
+	"github.com/kiin21/go-rest/pkg/response"
 )
 
 type StarterApplicationService struct {

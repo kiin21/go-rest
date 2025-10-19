@@ -11,79 +11,71 @@ import (
 	"gorm.io/gorm"
 )
 
-type MySQLBusinessUnitRepository struct {
+type BusinessUnitRepository struct {
 	db *gorm.DB
 }
 
-func NewMySQLBusinessUnitRepository(db *gorm.DB) repo.BusinessUnitRepository {
-	return &MySQLBusinessUnitRepository{db: db}
+func NewBusinessUnitRepository(db *gorm.DB) repo.BusinessUnitRepository {
+	return &BusinessUnitRepository{db: db}
 }
 
-func (r *MySQLBusinessUnitRepository) FindByID(ctx context.Context, id int64) (*model.BusinessUnit, error) {
-	var model entity.BusinessUnitModel
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&model).Error; err != nil {
-		return nil, err
-	}
-	return r.toDomain(&model), nil
-}
-
-func (r *MySQLBusinessUnitRepository) FindByIDs(ctx context.Context, ids []int64) ([]*model.BusinessUnit, error) {
+func (r *BusinessUnitRepository) FindByIDs(ctx context.Context, ids []int64) ([]*model.BusinessUnit, error) {
 	if len(ids) == 0 {
 		return []*model.BusinessUnit{}, nil
 	}
 
-	var models []entity.BusinessUnitModel
-	if err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&models).Error; err != nil {
+	var entities []entity.BusinessUnitEntity
+	if err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&entities).Error; err != nil {
 		return nil, err
 	}
 
-	domains := make([]*model.BusinessUnit, len(models))
-	for i, m := range models {
-		domains[i] = r.toDomain(&m)
+	domains := make([]*model.BusinessUnit, len(entities))
+	for i, m := range entities {
+		domains[i] = r.toModel(&m)
 	}
 	return domains, nil
 }
 
-func (r *MySQLBusinessUnitRepository) List(ctx context.Context, pg response.ReqPagination) ([]*model.BusinessUnit, int64, error) {
-	var models []entity.BusinessUnitModel
-	var total *int64
+func (r *BusinessUnitRepository) List(ctx context.Context, pg response.ReqPagination) ([]*model.BusinessUnit, int64, error) {
+	var entities []entity.BusinessUnitEntity
+	var total int64
 
-	query := r.db.WithContext(ctx).Model(&entity.BusinessUnitModel{})
+	query := r.db.WithContext(ctx).Model(&entity.BusinessUnitEntity{})
 
-	if err := query.Count(total).Error; err != nil {
+	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
 	offset := (pg.Page - 1) * pg.Limit
-	if err := query.Offset(offset).Limit(pg.Limit).Find(&models).Error; err != nil {
+	if err := query.Offset(offset).Limit(pg.Limit).Find(&entities).Error; err != nil {
 		return nil, 0, err
 	}
 
-	units := make([]*model.BusinessUnit, len(models))
-	for i, m := range models {
-		units[i] = r.toDomain(&m)
+	units := make([]*model.BusinessUnit, len(entities))
+	for i, m := range entities {
+		units[i] = r.toModel(&m)
 	}
 
-	return units, *total, nil
+	return units, total, nil
 }
 
-func (r *MySQLBusinessUnitRepository) FindByIDWithDetails(ctx context.Context, id int64) (*model.BusinessUnitWithDetails, error) {
-	var _model entity.BusinessUnitModel
+func (r *BusinessUnitRepository) FindByIDWithDetails(ctx context.Context, id int64) (*model.BusinessUnitWithDetails, error) {
+	var businessUnitEntity entity.BusinessUnitEntity
 	if err := r.db.WithContext(ctx).
 		Preload("Company").
 		Preload("Leader").
-		First(&_model, id).
+		First(&businessUnitEntity, id).
 		Error; err != nil {
 		return nil, err
 	}
-	return r.toDomainWithDetails(&_model), nil
+	return r.toModelWithDetails(&businessUnitEntity), nil
 }
 
-func (r *MySQLBusinessUnitRepository) ListWithDetails(ctx context.Context, pg response.ReqPagination) ([]*model.BusinessUnitWithDetails, int64, error) {
-	var models []entity.BusinessUnitModel
+func (r *BusinessUnitRepository) ListWithDetails(ctx context.Context, pg response.ReqPagination) ([]*model.BusinessUnitWithDetails, int64, error) {
+	var models []entity.BusinessUnitEntity
 	var total int64
 
-	query := r.db.WithContext(ctx).Model(&entity.BusinessUnitModel{})
+	query := r.db.WithContext(ctx).Model(&entity.BusinessUnitEntity{})
 
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -106,16 +98,16 @@ func (r *MySQLBusinessUnitRepository) ListWithDetails(ctx context.Context, pg re
 
 	units := make([]*model.BusinessUnitWithDetails, len(models))
 	for i, m := range models {
-		units[i] = r.toDomainWithDetails(&m)
+		units[i] = r.toModelWithDetails(&m)
 	}
 
 	return units, total, nil
 }
 
 // =============== UTILS ===================
-func (r *MySQLBusinessUnitRepository) toDomainWithDetails(m *entity.BusinessUnitModel) *model.BusinessUnitWithDetails {
+func (r *BusinessUnitRepository) toModelWithDetails(m *entity.BusinessUnitEntity) *model.BusinessUnitWithDetails {
 	bu := &model.BusinessUnitWithDetails{
-		BusinessUnit: r.toDomain(m), // Reuse existing converter
+		BusinessUnit: r.toModel(m), // Reuse existing converter
 	}
 
 	if m.Company != nil {
@@ -138,7 +130,7 @@ func (r *MySQLBusinessUnitRepository) toDomainWithDetails(m *entity.BusinessUnit
 	return bu
 }
 
-func (r *MySQLBusinessUnitRepository) toDomain(m *entity.BusinessUnitModel) *model.BusinessUnit {
+func (r *BusinessUnitRepository) toModel(m *entity.BusinessUnitEntity) *model.BusinessUnit {
 	return &model.BusinessUnit{
 		ID:        m.ID,
 		Name:      m.Name,

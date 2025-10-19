@@ -242,7 +242,16 @@ func (s *OrganizationApplicationService) ListBusinessUnits(ctx context.Context, 
 }
 
 func (s *OrganizationApplicationService) GetBusinessUnit(ctx context.Context, id int64) (*model.BusinessUnit, error) {
-	return s.businessUnitRepo.FindByID(ctx, id)
+	ids := make([]int64, 0, 1)
+	ids = append(ids, id)
+	bus, err := s.businessUnitRepo.FindByIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	if len(bus) == 0 || len(bus) > 1 {
+		return nil, sharedDomain.ErrNotFound
+	}
+	return bus[0], nil
 }
 
 func (s *OrganizationApplicationService) ListBusinessUnitsWithDetails(ctx context.Context, query businessunitquery.ListBusinessUnitsQuery) (*response.PaginatedResult[*model.BusinessUnitWithDetails], error) {

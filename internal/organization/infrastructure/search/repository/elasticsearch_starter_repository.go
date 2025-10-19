@@ -20,9 +20,7 @@ type ElasticsearchStarterRepository struct {
 }
 
 func NewElasticsearchStarterRepository(client *elasticsearch.Client) repo.StarterSearchRepository {
-	return &ElasticsearchStarterRepository{
-		client: client,
-	}
+	return &ElasticsearchStarterRepository{client: client}
 }
 
 func (r *ElasticsearchStarterRepository) Search(

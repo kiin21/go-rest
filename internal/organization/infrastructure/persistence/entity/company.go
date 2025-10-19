@@ -1,10 +1,10 @@
 package entity
 
-type CompanyModel struct {
+type CompanyEntity struct {
 	ID   int64  `gorm:"column:id;primaryKey;autoIncrement"`
 	Name string `gorm:"column:name;not null"`
 }
 
-func (CompanyModel) TableName() string {
+func (CompanyEntity) TableName() string {
 	return "companies"
 }

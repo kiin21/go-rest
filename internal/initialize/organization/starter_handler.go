@@ -94,6 +94,7 @@ func InitStarter(
 			return nil
 		}
 
+		// Create Kafka consumer.
 		brokers := strings.Split(kafkaBrokers, ",")
 		var err error
 		kafkaConsumer, err = messagingKafka.NewConsumer(brokers, kafkaConsumerGroup, kafkaTopic, eventHandler)
