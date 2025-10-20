@@ -1,171 +1,52 @@
 services:
-  # MySQL Database
-  mysql:
-    image: mysql:8.0
-    container_name: my-gorest-mysql
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: intern_app
-      MYSQL_USER: gouser
-      MYSQL_PASSWORD: gopassword
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./migrations:/docker-entrypoint-initdb.d
-    networks:
-      - gorest-network
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "localhost",
-        ]
-      timeout: 20s
-      retries: 10
-
-  # Elasticsearch
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
-    container_name: my-gorest-elasticsearch
-    restart: always
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-    volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
-    networks:
-      - gorest-network
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl -f http://localhost:9200/_cluster/health || exit 1",
-        ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  # Kibana (Optional - for Elasticsearch management)
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.11.0
-    container_name: my-gorest-kibana
-    restart: always
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-    ports:
-      - "5601:5601"
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-    networks:
-      - gorest-network
-
-  # Zookeeper (for Kafka coordination)
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    container_name: my-gorest-zookeeper
-    restart: always
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
-    networks:
-      - gorest-network
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "nc",
-          "-z",
-          "localhost",
-          "2181",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Kafka
-  kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    container_name: my-gorest-kafka
-    restart: always
-    depends_on:
-      zookeeper:
-        condition: service_healthy
-    ports:
-      - "9092:9092"
-      - "29092:29092"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-    networks:
-      - gorest-network
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "kafka-broker-api-versions",
-          "--bootstrap-server",
-          "localhost:9092",
-        ]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-
-  # Go Application
-  app:
+  # Starter Service
+  starter-service:
     build:
       context: .
-      dockerfile: ./Dockerfile
-    container_name: my-gorest-app
+      dockerfile: services/starter-service/Dockerfile
+    container_name: vng-starter-service
     restart: always
     ports:
-      - "3000:3000"
+      - "8080:8080"
     environment:
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_USER: gouser
-      DB_PASSWORD: gopassword
-      DB_NAME: intern_app
-      SERVER_PORT: 3000
-      LOG_LEVEL: debug
-      ELASTICSEARCH_ADDRESSES: http://elasticsearch:9200
-      ELASTICSEARCH_USERNAME: ""
-      ELASTICSEARCH_PASSWORD: ""
-      KAFKA_BROKERS: kafka:29092
-      KAFKA_TOPIC_SYNC_EVENTS: starter-sync-events
-      KAFKA_CONSUMER_GROUP: starter-sync-consumer
-    depends_on:
-      mysql:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+      - DB_URI=mysql://gouser:gopassword@mysql:3306/intern_app?charset=utf8mb4&parseTime=True&loc=Local
+      - SERVER_PORT=8080
+      - LOG_LEVEL=debug
+      - ELASTICSEARCH_ADDRESSES=http://elasticsearch:9200
+      - KAFKA_BROKERS=kafka:2902
+      - KAFKA_TOPIC_SYNC_EVENTS=starter-sync-events
+      - KAFKA_TOPIC_NOTIFICATIONS=starter-notification-events
+      - KAFKA_CONSUMER_GROUP=starter-sync-consumer
+    external_links:
+      - mysql
+      - elasticsearch
+      - kafka
     networks:
-      - gorest-network
+      - vng-network
 
-volumes:
-  mysql_data:
-    driver: local
-  elasticsearch_data:
-    driver: local
+  # Notification Service
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    container_name: vng-notification-service
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      - SERVER_PORT=8081
+      - LOG_LEVEL=debug
+      - KAFKA_BROKERS=kafka:2902
+      - KAFKA_TOPIC_NOTIFICATIONS=starter-notification-events
+      - KAFKA_CONSUMER_GROUP=notification-service-consumer
+      - MONGODB_URI=mongodb://notifications_user:notifications_pass@mongodb:27017/?authSource=admin
+      - MONGODB_DATABASE=notifications
+    external_links:
+      - mongodb
+      - kafka
+    networks:
+      - vng-network
 
 networks:
-  gorest-network:
-    driver: bridge
+  vng-network:
+    external: true

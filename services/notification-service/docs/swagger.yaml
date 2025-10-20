@@ -1,0 +1,114 @@
+basePath: /api/v1
+definitions:
+  dto.GenericAPIResponse:
+    properties:
+      code:
+        type: integer
+      data: {}
+      error: {}
+      message:
+        type: string
+    type: object
+  dto.ListNotiListAPIResponse:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/dto.ListNotiListAPIResponseData'
+      error: {}
+      message:
+        type: string
+    type: object
+  dto.ListNotiListAPIResponseData:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/dto.ListNotiResponse'
+        type: array
+      pagination:
+        $ref: '#/definitions/dto.ListNotiPagination'
+    type: object
+  dto.ListNotiPagination:
+    properties:
+      limit:
+        type: integer
+      next:
+        type: string
+      prev:
+        type: string
+      total_items:
+        type: integer
+    type: object
+  dto.ListNotiResponse:
+    properties:
+      from_starter:
+        type: string
+      id:
+        type: string
+      message:
+        type: string
+      timestamp:
+        type: string
+      to_starter:
+        type: string
+      type:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: REST APIs for managing notifications.
+  title: Notification Service API
+  version: "1.0"
+paths:
+  /notifications:
+    get:
+      description: Retrieve notifications with pagination and sorting options.
+      parameters:
+      - description: Sort notifications by field
+        enum:
+        - from
+        - to
+        - type
+        - timestamp
+        in: query
+        name: sort_by
+        type: string
+      - description: Sort order direction
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ListNotiListAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.GenericAPIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.GenericAPIResponse'
+      summary: List notifications
+      tags:
+      - Notifications
+swagger: "2.0"

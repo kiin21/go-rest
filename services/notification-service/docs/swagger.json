@@ -1,0 +1,169 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "REST APIs for managing notifications.",
+        "title": "Notification Service API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/api/v1",
+    "paths": {
+        "/notifications": {
+            "get": {
+                "description": "Retrieve notifications with pagination and sorting options.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "List notifications",
+                "parameters": [
+                    {
+                        "enum": [
+                            "from",
+                            "to",
+                            "type",
+                            "timestamp"
+                        ],
+                        "type": "string",
+                        "description": "Sort notifications by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "description": "Sort order direction",
+                        "name": "sort_order",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ListNotiListAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericAPIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenericAPIResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "dto.GenericAPIResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {},
+                "error": {},
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ListNotiListAPIResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/dto.ListNotiListAPIResponseData"
+                },
+                "error": {},
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ListNotiListAPIResponseData": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ListNotiResponse"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/dto.ListNotiPagination"
+                }
+            }
+        },
+        "dto.ListNotiPagination": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "next": {
+                    "type": "string"
+                },
+                "prev": {
+                    "type": "string"
+                },
+                "total_items": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.ListNotiResponse": {
+            "type": "object",
+            "properties": {
+                "from_starter": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "to_starter": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

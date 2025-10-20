@@ -1,0 +1,532 @@
+basePath: /api/v1
+definitions:
+  github_com_kiin21_go-rest_internal_organization_presentation_http_dto_department.AssignLeaderRequest:
+    properties:
+      leader:
+        $ref: "#/definitions/github_com_kiin21_go-rest_internal_organization_presentation_http_dto_department.LeaderInfo"
+    required:
+      - leader
+    type: object
+  github_com_kiin21_go-rest_internal_organization_presentation_http_dto_department.CreateDepartmentRequest:
+    properties:
+      business_unit_id:
+        type: integer
+      full_name:
+        maxLength: 255
+        minLength: 3
+        type: string
+      group_department_id:
+        type: integer
+      leader_id:
+        type: integer
+      shortname:
+        maxLength: 100
+        minLength: 2
+        type: string
+    required:
+      - full_name
+      - shortname
+    type: object
+  github_com_kiin21_go-rest_internal_organization_presentation_http_dto_department.LeaderInfo:
+    properties:
+      domain:
+        minLength: 1
+        type: string
+      id:
+        type: integer
+    type: object
+  github_com_kiin21_go-rest_internal_organization_presentation_http_dto_department.UpdateDepartmentRequest:
+    properties:
+      business_unit_id:
+        type: integer
+      full_name:
+        maxLength: 255
+        minLength: 3
+        type: string
+      group_department_id:
+        type: integer
+      leader_id:
+        type: integer
+      shortname:
+        maxLength: 100
+        minLength: 2
+        type: string
+    type: object
+  github_com_kiin21_go-rest_internal_organization_presentation_http_dto_starter.CreateStarterRequest:
+    properties:
+      department_id:
+        type: integer
+      domain:
+        maxLength: 25
+        minLength: 3
+        type: string
+      email:
+        maxLength: 100
+        type: string
+      job_title:
+        maxLength: 100
+        minLength: 2
+        type: string
+      line_manager_id:
+        type: integer
+      mobile:
+        maxLength: 20
+        minLength: 10
+        type: string
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      work_phone:
+        maxLength: 20
+        type: string
+    required:
+      - department_id
+      - domain
+      - email
+      - job_title
+      - mobile
+      - name
+      - work_phone
+    type: object
+  github_com_kiin21_go-rest_internal_organization_presentation_http_dto_starter.UpdateStarterRequest:
+    properties:
+      department_id:
+        type: integer
+      domain:
+        maxLength: 25
+        minLength: 2
+        type: string
+      email:
+        maxLength: 100
+        type: string
+      job_title:
+        maxLength: 100
+        minLength: 2
+        type: string
+      line_manager_id:
+        type: integer
+      mobile:
+        maxLength: 20
+        minLength: 10
+        type: string
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      work_phone:
+        maxLength: 20
+        type: string
+    required:
+      - domain
+    type: object
+  github_com_kiin21_go-rest_pkg_httputil.APIResponse:
+    properties:
+      code:
+        type: integer
+      data:
+        description: data return null not show
+      error:
+        description: Error return null not show
+      message:
+        type: string
+    type: object
+info:
+  contact: { }
+  description: REST APIs for managing starters and organizational resources.
+  title: Starter Service API
+  version: "1.0"
+paths:
+  /business-units:
+    get:
+      description: Retrieve business units with pagination
+      parameters:
+        - description: Page number
+          in: query
+          name: page
+          type: integer
+        - description: Items per page
+          in: query
+          name: limit
+          type: integer
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "400":
+          description: Bad Request
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+      summary: List business units
+      tags:
+        - Business Units
+  /business-units/{id}:
+    get:
+      description: Retrieve a business unit with nested details by ID
+      parameters:
+        - description: Business unit ID
+          in: path
+          name: id
+          required: true
+          type: integer
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "400":
+          description: Bad Request
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "404":
+          description: Not Found
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+      summary: Get business unit detail
+      tags:
+        - Business Units
+  /departments:
+    get:
+      description: Retrieve departments with optional filters
+      parameters:
+        - description: Filter by business unit
+          in: query
+          name: business_unit_id
+          type: integer
+        - description: Page number
+          in: query
+          name: page
+          type: integer
+        - description: Items per page
+          in: query
+          name: limit
+          type: integer
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "400":
+          description: Bad Request
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+      summary: List departments
+      tags:
+        - Departments
+    post:
+      consumes:
+        - application/json
+      description: Create a new department
+      parameters:
+        - description: Department payload
+          in: body
+          name: request
+          required: true
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_internal_organization_presentation_http_dto_department.CreateDepartmentRequest"
+      produces:
+        - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "400":
+          description: Bad Request
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+      summary: Create department
+      tags:
+        - Departments
+  /departments/{id}:
+    delete:
+      description: Delete a department by ID
+      parameters:
+        - description: Department ID
+          in: path
+          name: id
+          required: true
+          type: integer
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "400":
+          description: Bad Request
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "404":
+          description: Not Found
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+      summary: Delete department
+      tags:
+        - Departments
+    get:
+      description: Retrieve a department with nested details by ID
+      parameters:
+        - description: Department ID
+          in: path
+          name: id
+          required: true
+          type: integer
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "400":
+          description: Bad Request
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "404":
+          description: Not Found
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+      summary: Get department detail
+      tags:
+        - Departments
+    patch:
+      consumes:
+        - application/json
+      description: Update department information
+      parameters:
+        - description: Department ID
+          in: path
+          name: id
+          required: true
+          type: integer
+        - description: Update payload
+          in: body
+          name: request
+          required: true
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_internal_organization_presentation_http_dto_department.UpdateDepartmentRequest"
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "400":
+          description: Bad Request
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "404":
+          description: Not Found
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+      summary: Update department
+      tags:
+        - Departments
+  /departments/{id}/leader:
+    patch:
+      consumes:
+        - application/json
+      description: Assign or update the leader of a department
+      parameters:
+        - description: Department ID
+          in: path
+          name: id
+          required: true
+          type: integer
+        - description: Leader assignment payload
+          in: body
+          name: request
+          required: true
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_internal_organization_presentation_http_dto_department.AssignLeaderRequest"
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "400":
+          description: Bad Request
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "404":
+          description: Not Found
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+      summary: Assign department leader
+      tags:
+        - Departments
+  /starters:
+    get:
+      description: Retrieve starters with optional filters and pagination
+      parameters:
+        - description: Filter by business unit
+          in: query
+          name: business_unit_id
+          type: integer
+        - description: Filter by department
+          in: query
+          name: department_id
+          type: integer
+        - description: Keyword search
+          in: query
+          name: q
+          type: string
+        - description: Sort field
+          in: query
+          name: sort_by
+          type: string
+        - description: Sort order
+          in: query
+          name: sort_order
+          type: string
+        - description: Page number
+          in: query
+          name: page
+          type: integer
+        - description: Items per page
+          in: query
+          name: limit
+          type: integer
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "400":
+          description: Bad Request
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+      summary: List starters
+      tags:
+        - Starters
+    post:
+      consumes:
+        - application/json
+      description: Create a new starter record
+      parameters:
+        - description: Starter payload
+          in: body
+          name: request
+          required: true
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_internal_organization_presentation_http_dto_starter.CreateStarterRequest"
+      produces:
+        - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "400":
+          description: Bad Request
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "409":
+          description: Conflict
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+      summary: Create a starter
+      tags:
+        - Starters
+  /starters/{domain}:
+    delete:
+      description: Soft delete a starter by domain
+      parameters:
+        - description: Starter domain
+          in: path
+          name: domain
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "404":
+          description: Not Found
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+      summary: Delete starter
+      tags:
+        - Starters
+    get:
+      description: Get a starter by domain
+      parameters:
+        - description: Starter domain
+          in: path
+          name: domain
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "404":
+          description: Not Found
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+      summary: Get starter detail
+      tags:
+        - Starters
+    patch:
+      consumes:
+        - application/json
+      description: Partially update a starter by domain
+      parameters:
+        - description: Starter domain
+          in: path
+          name: domain
+          required: true
+          type: string
+        - description: Update payload
+          in: body
+          name: request
+          required: true
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_internal_organization_presentation_http_dto_starter.UpdateStarterRequest"
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "400":
+          description: Bad Request
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+        "404":
+          description: Not Found
+          schema:
+            $ref: "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+      summary: Update starter
+      tags:
+        - Starters
+swagger: "2.0"
