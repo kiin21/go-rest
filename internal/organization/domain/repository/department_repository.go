@@ -15,4 +15,6 @@ type DepartmentRepository interface {
 	Create(ctx context.Context, department *model.Department) error
 
 	Update(ctx context.Context, department *model.Department) error
+
+	Delete(ctx context.Context, id int64) error
 }

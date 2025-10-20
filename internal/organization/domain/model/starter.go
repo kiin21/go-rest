@@ -4,13 +4,15 @@ import (
 	"errors"
 	"time"
 
-	valueobject "github.com/kiin21/go-rest/internal/organization/domain/valueobject"
+	"github.com/kiin21/go-rest/internal/organization/domain/valueobject"
 )
 
 type StarterListFilter struct {
 	DepartmentID   *int64
 	BusinessUnitID *int64
 	LineManagerID  *int64
+	SortBy         string
+	SortOrder      string
 }
 
 type Starter struct {

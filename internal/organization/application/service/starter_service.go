@@ -40,19 +40,23 @@ func (s *StarterApplicationService) ListStarters(
 	ctx context.Context,
 	query starterquery.ListStartersQuery,
 ) (*response.PaginatedResult[*model.Starter], error) {
-	return s.fetchStarters(ctx, query)
-}
+	sortBy := query.SortBy
+	if sortBy == "" {
+		sortBy = "id"
+	}
+	sortOrder := query.SortOrder
+	if sortOrder == "" {
+		sortOrder = "asc"
+	}
 
-func (s *StarterApplicationService) fetchStarters(
-	ctx context.Context,
-	query starterquery.ListStartersQuery,
-) (*response.PaginatedResult[*model.Starter], error) {
 	if query.Keyword != "" && s.searchService != nil {
 		searchQuery := starterquery.SearchStartersQuery{
 			Keyword:        query.Keyword,
 			DepartmentID:   query.DepartmentID,
 			BusinessUnitID: query.BusinessUnitID,
 			Pagination:     query.Pagination,
+			SortBy:         sortBy,
+			SortOrder:      sortOrder,
 		}
 		return s.searchService.Search(ctx, searchQuery)
 	}
@@ -60,6 +64,8 @@ func (s *StarterApplicationService) fetchStarters(
 	filter := model.StarterListFilter{
 		DepartmentID:   query.DepartmentID,
 		BusinessUnitID: query.BusinessUnitID,
+		SortBy:         sortBy,
+		SortOrder:      sortOrder,
 	}
 
 	var (

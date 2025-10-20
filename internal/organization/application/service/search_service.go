@@ -36,9 +36,20 @@ func (s *StarterSearchService) Search(
 	query starterquery.SearchStartersQuery,
 ) (*response.PaginatedResult[*model.Starter], error) {
 
+	sortBy := query.SortBy
+	if sortBy == "" {
+		sortBy = "id"
+	}
+	sortOrder := query.SortOrder
+	if sortOrder == "" {
+		sortOrder = "asc"
+	}
+
 	filter := model.StarterListFilter{
 		DepartmentID:   query.DepartmentID,
 		BusinessUnitID: query.BusinessUnitID,
+		SortBy:         sortBy,
+		SortOrder:      sortOrder,
 	}
 
 	// Elasticsearch

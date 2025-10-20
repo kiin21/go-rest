@@ -3,6 +3,8 @@ package mysql
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/kiin21/go-rest/internal/organization/domain/model"
@@ -68,6 +70,8 @@ func (r *StarterRepository) List(ctx context.Context, filter model.StarterListFi
 		return nil, 0, err
 	}
 
+	query = r.applySort(query, filter.SortBy, filter.SortOrder)
+
 	// Apply pagination
 	offset := (pg.Page - 1) * pg.Limit
 	query = query.Offset(offset).Limit(pg.Limit)
@@ -113,6 +117,8 @@ func (r *StarterRepository) SearchByKeyword(ctx context.Context, keyword string,
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
+
+	query = r.applySort(query, filter.SortBy, filter.SortOrder)
 
 	// Apply pagination
 	offset := (pg.Page - 1) * pg.Limit
@@ -182,5 +188,26 @@ func (r *StarterRepository) toEntity(starter *model.Starter) *entity.StarterEnti
 		LineManagerID: starter.LineManagerID(),
 		CreatedAt:     starter.CreatedAt(),
 		UpdatedAt:     starter.UpdatedAt(),
+	}
+}
+
+func (r *StarterRepository) applySort(query *gorm.DB, sortBy, sortOrder string) *gorm.DB {
+	column := mapStarterSortColumn(sortBy)
+	direction := strings.ToLower(sortOrder)
+	if direction != "desc" {
+		direction = "asc"
+	}
+
+	return query.Order(fmt.Sprintf("%s %s", column, direction))
+}
+
+func mapStarterSortColumn(sortBy string) string {
+	switch strings.ToLower(sortBy) {
+	case "domain":
+		return "starters.domain"
+	case "created_at":
+		return "starters.created_at"
+	default:
+		return "starters.id"
 	}
 }

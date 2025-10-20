@@ -9,4 +9,7 @@ type SearchStartersQuery struct {
 	BusinessUnitID *int64
 
 	Pagination response.ReqPagination
+
+	SortBy    string
+	SortOrder string
 }

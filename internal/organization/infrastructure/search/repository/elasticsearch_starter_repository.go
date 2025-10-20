@@ -10,7 +10,7 @@ import (
 
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
-	model "github.com/kiin21/go-rest/internal/organization/domain/model"
+	"github.com/kiin21/go-rest/internal/organization/domain/model"
 	repo "github.com/kiin21/go-rest/internal/organization/domain/repository"
 	"github.com/kiin21/go-rest/pkg/response"
 )
@@ -250,10 +250,7 @@ func (r *ElasticsearchStarterRepository) buildSearchQuery(
 				"must": must,
 			},
 		},
-		"sort": []interface{}{
-			map[string]interface{}{"_score": "desc"}, // Sort by relevance
-			map[string]interface{}{"created_at": "desc"},
-		},
+		"sort": buildSearchSortClause(filter.SortBy, filter.SortOrder),
 	}
 
 	return esQuery
@@ -337,4 +334,58 @@ func (r *ElasticsearchStarterRepository) toDomain(source map[string]interface{})
 		createdAt,
 		updatedAt,
 	)
+}
+
+func buildSearchSortClause(sortBy, sortOrder string) []interface{} {
+	field := mapStarterSearchSortField(sortBy)
+	order := strings.ToLower(sortOrder)
+	if order != "desc" {
+		order = "asc"
+	}
+
+	if field == "" {
+		return []interface{}{
+			map[string]interface{}{
+				"_score": map[string]interface{}{
+					"order": "desc",
+				},
+			},
+			map[string]interface{}{
+				"created_at": map[string]interface{}{
+					"order": "desc",
+				},
+			},
+		}
+	}
+
+	sortClause := []interface{}{
+		map[string]interface{}{
+			field: map[string]interface{}{
+				"order": order,
+			},
+		},
+	}
+
+	if field != "_score" {
+		sortClause = append(sortClause, map[string]interface{}{
+			"_score": map[string]interface{}{
+				"order": "desc",
+			},
+		})
+	}
+
+	return sortClause
+}
+
+func mapStarterSearchSortField(sortBy string) string {
+	switch strings.ToLower(sortBy) {
+	case "id":
+		return "id"
+	case "domain":
+		return "domain.keyword"
+	case "created_at":
+		return "created_at"
+	default:
+		return ""
+	}
 }

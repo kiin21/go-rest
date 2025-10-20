@@ -1,6 +1,5 @@
 package department
 
-// CreateDepartmentRequest represents the HTTP request for creating a new department
 type CreateDepartmentRequest struct {
 	FullName          string `json:"full_name" binding:"required,min=3,max=255"`
 	Shortname         string `json:"shortname" binding:"required,min=2,max=100"`

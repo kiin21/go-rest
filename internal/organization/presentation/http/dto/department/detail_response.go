@@ -14,7 +14,7 @@ type DepartmentDetailResponse struct {
 	BusinessUnit     *shared.BusinessUnitNested `json:"business_unit,omitempty"`
 	Leader           *shared.LineManagerNested  `json:"leader,omitempty"`
 	ParentDepartment *shared.DepartmentNested   `json:"parent_department,omitempty"`
-	Subdepartments   []*shared.DepartmentNested `json:"subdepartments,omitempty"`
+	Subdepartments   []*shared.DepartmentNested `json:"sub_departments,omitempty"`
 	CreatedAt        time.Time                  `json:"created_at"`
 	UpdatedAt        time.Time                  `json:"updated_at"`
 }

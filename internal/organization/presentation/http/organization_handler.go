@@ -67,7 +67,6 @@ func (h *OrganizationHandler) listDepartments(ctx *gin.Context) (res interface{}
 
 	responseData := departmentdto.FromDomainsWithDetails(result.Data)
 	pagination := decoratePagination(ctx, h.urlResolver, result.Pagination)
-
 	return &response.PaginatedResult[*departmentdto.DepartmentDetailResponse]{
 		Data:       responseData,
 		Pagination: pagination,
@@ -247,6 +246,7 @@ func (h *OrganizationHandler) updateDepartment(ctx *gin.Context) (res interface{
 	}
 
 	cmd := departmentcommand.UpdateDepartmentCommand{
+		ID:                uriReq.ID,
 		FullName:          req.FullName,
 		Shortname:         req.Shortname,
 		BusinessUnitID:    req.BusinessUnitID,
@@ -254,7 +254,7 @@ func (h *OrganizationHandler) updateDepartment(ctx *gin.Context) (res interface{
 		LeaderID:          req.LeaderID,
 	}
 
-	result, err := h.orgService.UpdateDepartment(ctx, uriReq.ID, cmd)
+	result, err := h.orgService.UpdateDepartment(ctx, cmd)
 	if err != nil {
 		return nil, mapServiceError(err, "Department not found", "Failed to update department")
 	}
@@ -323,4 +323,39 @@ func (h *OrganizationHandler) assignLeaderToDepartment(ctx *gin.Context) (res in
 	}
 
 	return departmentdto.FromDomainWithDetails(result), nil
+}
+
+// DeleteDepartment godoc
+// @Summary Delete department
+// @Description Delete a department by ID
+// @Tags Departments
+// @Produce json
+// @Param id path int true "Department ID"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 404 {object} response.APIResponse
+// @Router /departments/{id} [delete]
+func (h *OrganizationHandler) DeleteDepartment(ctx *gin.Context) {
+	response.Wrap(h.deleteDepartment)(ctx)
+}
+
+func (h *OrganizationHandler) deleteDepartment(ctx *gin.Context) (res interface{}, err error) {
+	var req departmentdto.DeleteDepartmentRequest
+	if err := ctx.ShouldBindUri(&req); err != nil {
+		return nil, response.NewAPIError(http.StatusBadRequest, "Invalid query parameters", err.Error())
+	}
+
+	query := &departmentcommand.DeleteDepartmentCommand{
+		ID: req.ID,
+	}
+
+	err = h.orgService.DeleteDepartment(ctx, *query)
+	if err != nil {
+		return nil, mapServiceError(err, "Fail to delete department", "Department not found or failed to delete root department")
+	}
+
+	return gin.H{
+		"message": "Department deleted successfully",
+		"id":      req.ID,
+	}, nil
 }

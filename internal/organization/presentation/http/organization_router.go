@@ -11,6 +11,8 @@ var (
 	_ departmentdto.CreateDepartmentRequest
 	_ departmentdto.UpdateDepartmentRequest
 	_ departmentdto.AssignLeaderRequest
+	_ departmentdto.LeaderInfo
+	_ departmentdto.DeleteDepartmentRequest
 	_ departmentdto.DepartmentDetailResponse
 	_ businessunitdto.BusinessUnitDetailResponse
 )
@@ -76,6 +78,17 @@ func RegisterOrganizationRoutes(rg *gin.RouterGroup, handler *OrganizationHandle
 	// @Failure 404 {object} responsepkg.APIError
 	// @Router /departments/{id}/leader [patch]
 	departments.PATCH("/:id/leader", handler.AssignLeaderToDepartment)
+
+	// @Summary Delete department
+	// @Description Delete a department by ID
+	// @Tags Departments
+	// @Produce json
+	// @Param id path int true "Department ID"
+	// @Success 200 {object} map[string]interface{}
+	// @Failure 400 {object} responsepkg.APIError
+	// @Failure 404 {object} responsepkg.APIError
+	// @Router /departments/{id} [delete]
+	departments.DELETE("/:id", handler.DeleteDepartment)
 
 	businessUnits := rg.Group("/business-units")
 	// @Summary List business units

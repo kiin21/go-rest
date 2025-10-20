@@ -1,8 +1,9 @@
 package valueobject
 
 import (
-	domainErr "github.com/kiin21/go-rest/internal/shared/domain"
 	"strings"
+
+	domainErr "github.com/kiin21/go-rest/internal/shared/domain"
 )
 
 const allowedEmailDomain = "@vng.com.vn"

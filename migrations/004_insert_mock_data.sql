@@ -118,3 +118,162 @@ VALUES
 ('hanh', 'Nguyen Thi Hanh', 'hanh@vng.com.vn', '(+84) 0948901234', '0948901234', 'Admin Manager', 3, 1),
 ('inhnt', 'Nguyen Thanh Inh', 'inhnt@vng.com.vn', '(+84) 0949012345', '0949012345', 'Finance Manager', 3, 1),
 ('kimbui', 'Bui Thi Kim', 'kimbui@vng.com.vn', '(+84) 0950123456', '0950123456', 'Legal Counsel', 3, 1);
+
+INSERT INTO departments (group_department_id, business_unit_id, full_name, shortname, leader_id)
+VALUES
+-- Under Games Publishing Platform Engineering (dept 5) - Already has some children
+(5, 1, 'Game Monetization Team', 'GMT', NULL),
+(5, 1, 'Publishing Operations', 'POP', NULL),
+(5, 1, 'Community Management', 'CMT', NULL),
+
+-- Under Game Studio (dept 6) - Already has Studio Alpha, Beta, Gamma
+(6, 1, 'Creative Services', 'CRS', NULL),
+(6, 1, 'QA & Testing', 'QAT', NULL),
+
+-- Under Platform Engineering (dept 7) - Already has Mobile, PC, Cross-Platform
+(7, 1, 'Game Engine Team', 'GET', NULL),
+(7, 1, 'Tools & SDK', 'TSD', NULL),
+
+-- Under Product Core (dept 8)
+(8, 1, 'Product Strategy', 'PST', NULL),
+(8, 1, 'User Experience', 'UXP', NULL),
+(8, 1, 'Product Analytics', 'PAN', NULL),
+
+-- Under Games Publishing Platform Engineering > Games Platform Backend (dept 9)
+(9, 1, 'Backend Infrastructure', 'BIN', NULL),
+(9, 1, 'API Gateway', 'AGW', NULL),
+(9, 1, 'Microservices', 'MSV', NULL),
+
+-- Under Product Core > Platform Integration (dept 10)
+(10, 1, 'Third-Party Integration', 'TPI', NULL),
+(10, 1, 'Payment Integration', 'PIN', NULL),
+
+-- Under Platform Engineering > Game Infrastructure Operation (dept 11)
+(11, 1, 'Cloud Infrastructure', 'CIN', NULL),
+(11, 1, 'Network Operations', 'NOP', NULL),
+(11, 1, 'Monitoring & Alerting', 'MNA', NULL),
+
+-- Under Platform Engineering > Game Data Studio (dept 12)
+(12, 1, 'Data Pipeline', 'DPL', NULL),
+(12, 1, 'Analytics Platform', 'APL', NULL),
+(12, 1, 'Machine Learning', 'MLT', NULL);
+
+
+INSERT INTO departments (group_department_id, business_unit_id, full_name, shortname, leader_id)
+VALUES
+-- Under Studio Alpha (dept 17)
+(17, 1, 'Alpha - Game Design', 'AGD', NULL),
+(17, 1, 'Alpha - Programming', 'APG', NULL),
+(17, 1, 'Alpha - Art & Animation', 'AAA', NULL),
+
+-- Under Studio Beta (dept 18)
+(18, 1, 'Beta - Game Design', 'BGD', NULL),
+(18, 1, 'Beta - Programming', 'BPG', NULL),
+
+-- Under Mobile Games Development (dept 20)
+(20, 1, 'iOS Development', 'IOS', NULL),
+(20, 1, 'Android Development', 'AND', NULL),
+(20, 1, 'Mobile QA', 'MQA', NULL),
+
+-- Under PC Games Development (dept 21)
+(21, 1, 'Windows Client', 'WIN', NULL),
+(21, 1, 'Game Optimization', 'GOP', NULL),
+
+-- Under Backend Infrastructure (will be dept 31)
+(31, 1, 'Database Team', 'DBT', NULL),
+(31, 1, 'Cache & Storage', 'CAS', NULL),
+
+-- Under Cloud Infrastructure (will be dept 39)
+(39, 1, 'AWS Operations', 'AWS', NULL),
+(39, 1, 'Container Platform', 'CPF', NULL),
+
+-- Under Data Pipeline (will be dept 42)
+(42, 1, 'ETL Development', 'ETL', NULL),
+(42, 1, 'Data Quality', 'DQA', NULL);
+
+INSERT INTO departments (group_department_id, business_unit_id, full_name, shortname, leader_id)
+VALUES
+-- Under Alpha - Programming (dept 49)
+(49, 1, 'Gameplay Programming', 'GPP', NULL),
+(49, 1, 'Engine Programming', 'EPG', NULL),
+(49, 1, 'Network Programming', 'NPG', NULL),
+
+-- Under iOS Development (dept 53)
+(53, 1, 'iOS UI/UX', 'IUX', NULL),
+(53, 1, 'iOS Backend Integration', 'IBI', NULL),
+
+-- Under Android Development (dept 54)
+(54, 1, 'Android UI/UX', 'AUX', NULL),
+(54, 1, 'Android Performance', 'APF', NULL),
+
+-- Under Database Team (dept 58)
+(58, 1, 'MySQL Administration', 'MYA', NULL),
+(58, 1, 'MongoDB Operations', 'MGO', NULL);
+
+-- VNG Corporation (id=1)
+-- ├─ VNGGames (id=2)
+-- │  ├─ Executive Services (id=3)
+-- │  ├─ Games Publishing Platform Engineering (id=5)
+-- │  │  ├─ Game Analytics Team (id=13)
+-- │  │  ├─ Game Security Team (id=14)
+-- │  │  ├─ Live Operations Team (id=15)
+-- │  │  ├─ Player Support Team (id=16)
+-- │  │  ├─ Game Monetization Team (id=25)
+-- │  │  ├─ Publishing Operations (id=26)
+-- │  │  ├─ Community Management (id=27)
+-- │  │  └─ Games Platform Backend (id=9)
+-- │  │     ├─ Backend Infrastructure (id=31)
+-- │  │     │  ├─ Database Team (id=58)
+-- │  │     │  │  ├─ MySQL Administration (id=65)
+-- │  │     │  │  └─ MongoDB Operations (id=66)
+-- │  │     │  └─ Cache & Storage (id=59)
+-- │  │     ├─ API Gateway (id=32)
+-- │  │     └─ Microservices (id=33)
+-- │  ├─ Game Studio (id=6)
+-- │  │  ├─ Studio Alpha (id=17)
+-- │  │  │  ├─ Alpha - Game Design (id=47)
+-- │  │  │  ├─ Alpha - Programming (id=48)
+-- │  │  │  │  ├─ Gameplay Programming (id=61)
+-- │  │  │  │  ├─ Engine Programming (id=62)
+-- │  │  │  │  └─ Network Programming (id=63)
+-- │  │  │  └─ Alpha - Art & Animation (id=49)
+-- │  │  ├─ Studio Beta (id=18)
+-- │  │  │  ├─ Beta - Game Design (id=50)
+-- │  │  │  └─ Beta - Programming (id=51)
+-- │  │  ├─ Studio Gamma (id=19)
+-- │  │  ├─ Creative Services (id=28)
+-- │  │  └─ QA & Testing (id=29)
+-- │  ├─ Platform Engineering (id=7)
+-- │  │  ├─ Mobile Games Development (id=20)
+-- │  │  │  ├─ iOS Development (id=52)
+-- │  │  │  │  ├─ iOS UI/UX (id=67)
+-- │  │  │  │  └─ iOS Backend Integration (id=68)
+-- │  │  │  ├─ Android Development (id=53)
+-- │  │  │  │  ├─ Android UI/UX (id=69)
+-- │  │  │  │  └─ Android Performance (id=70)
+-- │  │  │  └─ Mobile QA (id=54)
+-- │  │  ├─ PC Games Development (id=21)
+-- │  │  │  ├─ Windows Client (id=55)
+-- │  │  │  └─ Game Optimization (id=56)
+-- │  │  ├─ Cross-Platform Development (id=22)
+-- │  │  ├─ Game Engine Team (id=30)
+-- │  │  ├─ Tools & SDK (id=31)
+-- │  │  ├─ Game Infrastructure Operation (id=11)
+-- │  │  │  ├─ Cloud Infrastructure (id=39)
+-- │  │  │  │  ├─ AWS Operations (id=60)
+-- │  │  │  │  └─ Container Platform (id=61)
+-- │  │  │  ├─ Network Operations (id=40)
+-- │  │  │  └─ Monitoring & Alerting (id=41)
+-- │  │  └─ Game Data Studio (id=12)
+-- │  │     ├─ Data Pipeline (id=42)
+-- │  │     │  ├─ ETL Development (id=71)
+-- │  │     │  └─ Data Quality (id=72)
+-- │  │     ├─ Analytics Platform (id=43)
+-- │  │     └─ Machine Learning (id=44)
+-- │  └─ Product Core (id=8)
+-- │     ├─ Product Strategy (id=35)
+-- │     ├─ User Experience (id=36)
+-- │     ├─ Product Analytics (id=37)
+-- │     └─ Platform Integration (id=10)
+-- │        ├─ Third-Party Integration (id=38)
+-- │        └─ Payment Integration (id=39)

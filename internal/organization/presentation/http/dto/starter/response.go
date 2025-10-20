@@ -3,7 +3,7 @@ package starter
 import (
 	"time"
 
-	model "github.com/kiin21/go-rest/internal/organization/domain/model"
+	"github.com/kiin21/go-rest/internal/organization/domain/model"
 	"github.com/kiin21/go-rest/internal/organization/presentation/http/dto/shared"
 	sharedDomain "github.com/kiin21/go-rest/internal/shared/domain/model"
 )

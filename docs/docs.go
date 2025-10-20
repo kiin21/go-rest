@@ -226,6 +226,45 @@ const docTemplate = `{
                     }
                 }
             },
+            "delete": {
+                "description": "Delete a department by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Departments"
+                ],
+                "summary": "Delete department",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Department ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_response.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_response.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_response.APIResponse"
+                        }
+                    }
+                }
+            },
             "patch": {
                 "description": "Update department information",
                 "consumes": [

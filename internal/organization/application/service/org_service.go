@@ -9,7 +9,7 @@ import (
 	businessunitquery "github.com/kiin21/go-rest/internal/organization/application/dto/businessunit/query"
 	departmentcommand "github.com/kiin21/go-rest/internal/organization/application/dto/department/command"
 	departmentquery "github.com/kiin21/go-rest/internal/organization/application/dto/department/query"
-	model "github.com/kiin21/go-rest/internal/organization/domain/model"
+	"github.com/kiin21/go-rest/internal/organization/domain/model"
 	"github.com/kiin21/go-rest/internal/organization/domain/repository"
 	sharedDomain "github.com/kiin21/go-rest/internal/shared/domain"
 	"github.com/kiin21/go-rest/pkg/response"
@@ -33,10 +33,7 @@ func NewOrganizationApplicationService(
 	}
 }
 
-func (s *OrganizationApplicationService) GetAllDepartments(
-	ctx context.Context,
-	query departmentquery.ListDepartmentsQuery,
-) (*response.PaginatedResult[*model.DepartmentWithDetails], error) {
+func (s *OrganizationApplicationService) GetAllDepartments(ctx context.Context, query departmentquery.ListDepartmentsQuery) (*response.PaginatedResult[*model.DepartmentWithDetails], error) {
 	filter := model.DepartmentListFilter{BusinessUnitID: query.BusinessUnitID}
 
 	departments, total, err := s.departmentRepo.ListWithDetails(ctx, filter, query.Pagination)
@@ -72,10 +69,7 @@ func (s *OrganizationApplicationService) GetAllDepartments(
 	}, nil
 }
 
-func (s *OrganizationApplicationService) GetOneDepartment(
-	ctx context.Context,
-	query departmentquery.GetDepartmentQuery,
-) (*model.DepartmentWithDetails, error) {
+func (s *OrganizationApplicationService) GetOneDepartment(ctx context.Context, query departmentquery.GetDepartmentQuery) (*model.DepartmentWithDetails, error) {
 	ids := make([]int64, 0, 1)
 	ids = append(ids, query.ID)
 
@@ -84,17 +78,14 @@ func (s *OrganizationApplicationService) GetOneDepartment(
 	if err != nil {
 		return nil, err
 	}
-	if len(departments) == 0 || len(departments) > 1 {
-		return nil, response.NewAPIError(400, "Bad request", sharedDomain.ErrInvalidInput)
+	if len(departments) == 0 {
+		return nil, sharedDomain.ErrNotFound
 	}
 
 	return departments[0], nil
 }
 
-func (s *OrganizationApplicationService) CreateDepartment(
-	ctx context.Context,
-	cmd departmentcommand.CreateDepartmentCommand,
-) (*model.DepartmentWithDetails, error) {
+func (s *OrganizationApplicationService) CreateDepartment(ctx context.Context, cmd departmentcommand.CreateDepartmentCommand) (*model.DepartmentWithDetails, error) {
 	department := &model.Department{
 		FullName:          cmd.FullName,
 		Shortname:         cmd.Shortname,
@@ -118,10 +109,10 @@ func (s *OrganizationApplicationService) CreateDepartment(
 	return detailedDepartments[0], nil
 }
 
-func (s *OrganizationApplicationService) UpdateDepartment(ctx context.Context, id int64, cmd departmentcommand.UpdateDepartmentCommand) (*model.DepartmentWithDetails, error) {
+func (s *OrganizationApplicationService) UpdateDepartment(ctx context.Context, cmd departmentcommand.UpdateDepartmentCommand) (*model.DepartmentWithDetails, error) {
 
 	ids := make([]int64, 0, 1)
-	ids = append(ids, id)
+	ids = append(ids, cmd.ID)
 	departments, err := s.departmentRepo.FindByIDsWithDetails(ctx, ids)
 	if err != nil {
 		return nil, err
@@ -150,6 +141,10 @@ func (s *OrganizationApplicationService) UpdateDepartment(ctx context.Context, i
 	}
 
 	return department, nil
+}
+
+func (s *OrganizationApplicationService) DeleteDepartment(ctx context.Context, cmd departmentcommand.DeleteDepartmentCommand) error {
+	return s.departmentRepo.Delete(ctx, cmd.ID)
 }
 
 func (s *OrganizationApplicationService) AssignLeader(ctx context.Context, cmd departmentcommand.AssignLeaderCommand) (*model.DepartmentWithDetails, error) {
@@ -189,7 +184,7 @@ func (s *OrganizationApplicationService) AssignLeader(ctx context.Context, cmd d
 			department.LeaderID = &leaderID
 		}
 	default:
-		return nil, response.NewAPIError(400, "Invalid leader identifier type", nil)
+		return nil, sharedDomain.ErrInvalidInput
 	}
 
 	if err := s.departmentRepo.Update(ctx, &model.Department{

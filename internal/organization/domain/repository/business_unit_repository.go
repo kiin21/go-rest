@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	model "github.com/kiin21/go-rest/internal/organization/domain/model"
+	"github.com/kiin21/go-rest/internal/organization/domain/model"
 	"github.com/kiin21/go-rest/pkg/response"
 )
 

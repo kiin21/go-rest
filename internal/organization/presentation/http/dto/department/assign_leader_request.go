@@ -5,6 +5,7 @@ import (
 	"fmt"
 )
 
+// LeaderInfo represents the identifier details for a department leader.
 type LeaderInfo struct {
 	ID     *int64  `json:"id" binding:"omitempty,gt=0"`
 	Domain *string `json:"domain" binding:"omitempty,min=1"`

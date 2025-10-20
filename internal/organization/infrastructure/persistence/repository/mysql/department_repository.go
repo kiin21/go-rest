@@ -39,7 +39,9 @@ func (r *DepartmentRepository) ListWithDetails(
 	var departmentWithCounts []DeptWithCounts
 	var total int64
 
-	baseQuery := r.db.WithContext(ctx).Table("v_departments_with_counts")
+	baseQuery := r.db.WithContext(ctx).
+		Table("v_departments_with_counts").
+		Where("deleted_at IS NULL")
 
 	if filter.BusinessUnitID != nil {
 		baseQuery = baseQuery.Where("business_unit_id = ?", *filter.BusinessUnitID)
@@ -51,7 +53,7 @@ func (r *DepartmentRepository) ListWithDetails(
 
 	// Main query with pagination
 	offset := (pg.Page - 1) * pg.Limit
-	if err := baseQuery.Order("full_name ASC").Offset(offset).Limit(pg.Limit).Find(&departmentWithCounts).Error; err != nil {
+	if err := baseQuery.Offset(offset).Limit(pg.Limit).Find(&departmentWithCounts).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -133,7 +135,6 @@ func (r *DepartmentRepository) ListWithDetails(
 		}
 	}
 
-
 	subDepartmentMap := make(map[int64][]*sharedModel.OrgDepartmentNested)
 	if len(deptIDs) > 0 {
 		type SubDepartment struct {
@@ -145,9 +146,9 @@ func (r *DepartmentRepository) ListWithDetails(
 
 		var subDepartments []SubDepartment
 
-		if err := r.db.WithContext(ctx).Table("v_departments_with_counts").
+		if err := r.db.WithContext(ctx).Table("departments").
 			Select("id, group_department_id, full_name, shortname").
-			Where("group_department_id IN ?", deptIDs).
+			Where("group_department_id IN ? AND deleted_at IS NULL", deptIDs).
 			Find(&subDepartments).Error; err == nil {
 			for _, sd := range subDepartments {
 				subDepartmentMap[sd.GroupDepartmentID] = append(subDepartmentMap[sd.GroupDepartmentID], &sharedModel.OrgDepartmentNested{
@@ -216,7 +217,7 @@ func (r *DepartmentRepository) FindByIDsWithDetails(
 
 	if err := r.db.WithContext(ctx).
 		Table("v_departments_with_bu").
-		Where("id IN ?", ids).
+		Where("id IN ? AND deleted_at IS NULL", ids).
 		Find(&viewResults).Error; err != nil {
 		return nil, err
 	}
@@ -226,7 +227,9 @@ func (r *DepartmentRepository) FindByIDsWithDetails(
 	buIDs := make(map[int64]bool)
 	leaderIDs := make(map[int64]bool)
 
-	for _, vr := range viewResults {
+	deptIDs := make([]int64, len(viewResults))
+	for i, vr := range viewResults {
+		deptIDs[i] = vr.ID
 		if vr.GroupDepartmentID != nil {
 			groupDeptIDs[*vr.GroupDepartmentID] = true
 		}
@@ -290,6 +293,36 @@ func (r *DepartmentRepository) FindByIDsWithDetails(
 		}
 	}
 
+	subDeptMap := make(map[int64][]*sharedModel.OrgDepartmentNested)
+	if len(deptIDs) > 0 {
+		type subDeptRow struct {
+			ID                int64  `gorm:"column:id"`
+			GroupDepartmentID *int64 `gorm:"column:group_department_id"`
+			FullName          string `gorm:"column:full_name"`
+			Shortname         string `gorm:"column:shortname"`
+		}
+
+		var subDeptRows []subDeptRow
+
+		if err := r.db.WithContext(ctx).
+			Table("departments").
+			Select("id, group_department_id, full_name, shortname").
+			Where("group_department_id IN ? AND deleted_at IS NULL", deptIDs).
+			Find(&subDeptRows).Error; err == nil {
+			for _, row := range subDeptRows {
+				if row.GroupDepartmentID == nil {
+					continue
+				}
+
+				subDeptMap[*row.GroupDepartmentID] = append(subDeptMap[*row.GroupDepartmentID], &sharedModel.OrgDepartmentNested{
+					ID:        row.ID,
+					FullName:  row.FullName,
+					Shortname: row.Shortname,
+				})
+			}
+		}
+	}
+
 	resultMap := make(map[int64]*model.DepartmentWithDetails)
 	for _, vr := range viewResults {
 		rel := &model.DepartmentWithDetails{
@@ -323,6 +356,10 @@ func (r *DepartmentRepository) FindByIDsWithDetails(
 			if lm, ok := leaderMapByLeaderId[*vr.LeaderID]; ok {
 				rel.Leader = lm
 			}
+		}
+
+		if subs, ok := subDeptMap[vr.ID]; ok {
+			rel.Subdepartments = subs
 		}
 
 		resultMap[vr.ID] = rel
@@ -375,6 +412,12 @@ func (r *DepartmentRepository) Update(ctx context.Context, department *model.Dep
 	}
 
 	return nil
+}
+
+func (r *DepartmentRepository) Delete(ctx context.Context, id int64) error {
+	return r.db.WithContext(ctx).
+		Exec("CALL sp_delete_department(?)", id).
+		Error
 }
 
 func (r *DepartmentRepository) toModel(dm *entity.DepartmentEntity) *model.Department {
