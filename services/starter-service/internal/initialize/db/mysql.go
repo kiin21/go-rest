@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kiin21/go-rest/services/starter-service/internal/config"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -17,8 +16,8 @@ import (
 
 var DB *gorm.DB
 
-func InitDB(cfg *config.Config) (*gorm.DB, error) {
-	dsn, err := buildDSN(cfg.DBURI)
+func InitMySQL(dburi string) (*gorm.DB, error) {
+	dsn, err := buildDSN(dburi)
 	if err != nil {
 		return nil, err
 	}

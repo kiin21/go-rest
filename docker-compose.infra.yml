@@ -22,7 +22,7 @@ services:
 
   # MongoDB Database
   mongodb:
-    image: mongo:7.0
+    image: mongo:8.0
     container_name: vng-mongodb
     environment:
       MONGO_INITDB_ROOT_USERNAME: notifications_user
@@ -46,6 +46,8 @@ services:
       ME_CONFIG_BASICAUTH_USERNAME: mongoexpressuser
       ME_CONFIG_BASICAUTH_PASSWORD: mongoexpresspass
       ME_CONFIG_MONGODB_URL: mongodb://notifications_user:notifications_pass@mongodb:27017/?authSource=admin
+    networks:
+      - vng-network
 
   # Elasticsearch
   elasticsearch:

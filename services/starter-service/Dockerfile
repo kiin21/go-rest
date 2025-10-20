@@ -47,6 +47,6 @@ RUN chown -R appuser:appgroup /home/appuser
 # Switch to non-root user
 USER appuser
 
-EXPOSE 8080
+EXPOSE 3000
 
 CMD ["./main"]

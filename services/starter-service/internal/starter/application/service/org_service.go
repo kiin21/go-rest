@@ -15,23 +15,23 @@ import (
 	departmentcommand "github.com/kiin21/go-rest/services/starter-service/internal/starter/application/dto/department/command"
 	departmentquery "github.com/kiin21/go-rest/services/starter-service/internal/starter/application/dto/department/query"
 	sharedDomain "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/error"
+	domainmessaging "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/messaging"
 	"github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/model"
 	"github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/repository"
-	messagebroker "github.com/kiin21/go-rest/services/starter-service/internal/starter/infrastructure/messagebroker"
 )
 
 type OrganizationApplicationService struct {
 	departmentRepo   repository.DepartmentRepository
 	businessUnitRepo repository.BusinessUnitRepository
 	starterRepo      repository.StarterRepository
-	notificationPub  messagebroker.NotificationPublisher
+	notificationPub  domainmessaging.NotificationPublisher
 }
 
 func NewOrganizationApplicationService(
 	departmentRepo repository.DepartmentRepository,
 	businessUnitRepo repository.BusinessUnitRepository,
 	starterRepo repository.StarterRepository,
-	notificationPublisher messagebroker.NotificationPublisher,
+	notificationPublisher domainmessaging.NotificationPublisher,
 ) *OrganizationApplicationService {
 	return &OrganizationApplicationService{
 		departmentRepo:   departmentRepo,

@@ -6,12 +6,12 @@ import (
 	"strings"
 
 	"github.com/elastic/go-elasticsearch/v8"
-	"github.com/kiin21/go-rest/pkg/events"
 	"github.com/kiin21/go-rest/pkg/httputil"
 	sharedKafka "github.com/kiin21/go-rest/pkg/kafka"
 	orgApp "github.com/kiin21/go-rest/services/starter-service/internal/starter/application/service"
 	orgRepository "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/repository"
 	orgService "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/service"
+	orgInfraMsgBroker "github.com/kiin21/go-rest/services/starter-service/internal/starter/infrastructure/messagebroker"
 	orgInfraSearch "github.com/kiin21/go-rest/services/starter-service/internal/starter/infrastructure/search/repository"
 	orgHttp "github.com/kiin21/go-rest/services/starter-service/internal/starter/presentation/http"
 )
@@ -30,7 +30,6 @@ func InitStarter(
 
 	// Initialize Kafka Producer for search sync events
 	var kafkaProducer *sharedKafka.Producer
-	var kafkaConsumer *sharedKafka.EventConsumer
 	if len(brokers) > 0 && kafkaSyncTopic != "" {
 		var err error
 		kafkaProducer, err = sharedKafka.NewProducerWithTopic(brokers, kafkaSyncTopic)
@@ -78,32 +77,27 @@ func InitStarter(
 		log.Println("Elasticsearch client is nil, skipping index initialization")
 	}
 
-	// Initialize Kafka Consumer
+	// Initialize Kafka Consumer with dedicated event handler
 	if kafkaProducer != nil && searchRepository != nil && kafkaConsumerGroup != "" && kafkaSyncTopic != "" && len(brokers) > 0 {
-		eventHandler := func(ctx context.Context, event *events.Event) error {
-			switch event.Type {
-			case events.EventTypeStarterIndex, events.EventTypeStarterUpdate, events.EventTypeStarterInsert:
-				starter, err := starterRepo.FindByDomain(ctx, event.Domain)
-				if err != nil {
-					return err
-				}
-				return searchRepository.IndexStarter(ctx, starter)
-			case events.EventTypeStarterDelete:
-				return searchRepository.DeleteFromIndex(ctx, event.Domain)
-			}
-			return nil
-		}
+		// Create dedicated event handler
+		syncEventHandler := orgInfraMsgBroker.NewSyncEventHandler(starterRepo, searchRepository)
 
-		var err error
-		kafkaConsumer, err = sharedKafka.NewEventConsumer(brokers, kafkaConsumerGroup, []string{kafkaSyncTopic}, eventHandler)
+		// Create Kafka consumer with the handler
+		kafkaConsumer, err := sharedKafka.NewEventConsumer(
+			brokers,
+			kafkaConsumerGroup,
+			[]string{kafkaSyncTopic},
+			syncEventHandler.Handle, // Use the handler's Handle method
+		)
 		if err != nil {
 			log.Printf("Warning: failed to create Kafka consumer: %v", err)
 		} else {
+			log.Println("Kafka consumer created successfully, starting in background...")
 			go kafkaConsumer.Start()
 		}
 	}
 
-	// Domain Services.
+	// Initialize Domain Services
 	starterDomainService := orgService.NewStarterDomainService(starterRepo)
 
 	enrichmentService := orgService.NewStarterEnrichmentService(
@@ -112,6 +106,7 @@ func InitStarter(
 		businessUnitRepo,
 	)
 
+	// Initialize Application Service
 	starterService := orgApp.NewStarterApplicationService(
 		starterRepo,
 		starterDomainService,

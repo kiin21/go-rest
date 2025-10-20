@@ -7,6 +7,7 @@ import (
 	"github.com/kiin21/go-rest/services/starter-service/internal/config"
 	initDB "github.com/kiin21/go-rest/services/starter-service/internal/initialize/db"
 	initES "github.com/kiin21/go-rest/services/starter-service/internal/initialize/elasticsearch"
+	initBroker "github.com/kiin21/go-rest/services/starter-service/internal/initialize/messagebroker"
 
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/gin-gonic/gin"
@@ -20,7 +21,7 @@ func Run() (*gin.Engine, string) {
 	}
 
 	// 2> Initialize database connection
-	db, err := initDB.InitDB(&cfg)
+	db, err := initDB.InitMySQL(cfg.DBURI)
 	if err != nil {
 		log.Fatalf("Could not initialize database: %v", err)
 	}
@@ -42,14 +43,20 @@ func Run() (*gin.Engine, string) {
 		}
 	}
 
-	// 4> Initialize router with Kafka config
+	// 4> Initialize Kafka brokers
+	notificationPublisher := initBroker.InitNotificationPublisher(
+		cfg.KafkaBrokers,
+		cfg.KafkaTopicNotifications,
+	)
+
+	// 5> Initialize router
 	r := InitRouter(
 		db,
 		esClient,
 		cfg.LogLevel,
+		notificationPublisher,
 		cfg.KafkaBrokers,
 		cfg.KafkaTopicSyncEvents,
-		cfg.KafkaTopicNotifications,
 		cfg.KafkaConsumerGroup,
 	)
 

@@ -1,22 +1,19 @@
-package messaging
+package messagebroker
 
 import (
 	"context"
 
 	"github.com/kiin21/go-rest/pkg/events"
 	pkgKafka "github.com/kiin21/go-rest/pkg/kafka"
+	domainmessaging "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/messaging"
 )
-
-type NotificationPublisher interface {
-	PublishLeaderAssignment(ctx context.Context, event *events.LeaderAssignmentNotification) error
-}
 
 type kafkaNotificationPublisher struct {
 	producer *pkgKafka.Producer
 	topic    string
 }
 
-func NewKafkaNotificationPublisher(producer *pkgKafka.Producer, topic string) NotificationPublisher {
+func NewKafkaNotificationPublisher(producer *pkgKafka.Producer, topic string) domainmessaging.NotificationPublisher {
 	return &kafkaNotificationPublisher{
 		producer: producer,
 		topic:    topic,

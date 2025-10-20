@@ -1,16 +1,13 @@
 package initialize
 
 import (
-	"context"
 	"log"
-	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kiin21/go-rest/pkg/events"
 	"github.com/kiin21/go-rest/pkg/httputil"
-	sharedKafka "github.com/kiin21/go-rest/pkg/kafka"
 	"github.com/kiin21/go-rest/services/notification-service/internal/config"
 	initDB "github.com/kiin21/go-rest/services/notification-service/internal/initialize/db"
+	initmessagebroker "github.com/kiin21/go-rest/services/notification-service/internal/initialize/messagebroker"
 	notiapp "github.com/kiin21/go-rest/services/notification-service/internal/notification/application"
 	notinfra "github.com/kiin21/go-rest/services/notification-service/internal/notification/infrastructure/repository"
 	notihttp "github.com/kiin21/go-rest/services/notification-service/internal/notification/presentation/http"
@@ -49,55 +46,16 @@ func Run() (*gin.Engine, string) {
 }
 
 func startNotificationConsumer(cfg config.Config, service *notiapp.NotiApplicationService) {
-	brokers := parseKafkaBrokers(cfg.KafkaBrokers)
-	if len(brokers) == 0 || cfg.KafkaTopicNotifications == "" || cfg.KafkaConsumerGroup == "" {
-		log.Printf("Warning: Kafka notification consumer disabled due to incomplete configuration")
-		return
-	}
-
-	handler := func(ctx context.Context, event *events.Event) error {
-		if event.Type != events.EventTypeNotificationLeaderAssignment {
-			log.Printf("Warning: skipping unsupported notification event type %s", event.Type)
-			return nil
-		}
-
-		var payload events.LeaderAssignmentNotification
-		if err := event.DecodePayload(&payload); err != nil {
-			return err
-		}
-		if payload.Timestamp.IsZero() {
-			payload.Timestamp = event.Timestamp
-		}
-
-		return service.StoreNotification(ctx, &payload)
-	}
-
-	consumer, err := sharedKafka.NewEventConsumer(
-		brokers,
+	consumer := initmessagebroker.InitNotificationConsumer(
+		cfg.KafkaBrokers,
 		cfg.KafkaConsumerGroup,
-		[]string{cfg.KafkaTopicNotifications},
-		handler,
+		cfg.KafkaTopicNotifications,
+		service,
 	)
-	if err != nil {
-		log.Printf("Warning: failed to initialize Kafka consumer: %v", err)
+	if consumer == nil {
 		return
 	}
 
 	go consumer.Start()
 	log.Printf("Kafka notification consumer started for topic %s", cfg.KafkaTopicNotifications)
-}
-
-func parseKafkaBrokers(raw string) []string {
-	if raw == "" {
-		return nil
-	}
-	parts := strings.Split(raw, ",")
-	brokers := make([]string, 0, len(parts))
-	for _, part := range parts {
-		trimmed := strings.TrimSpace(part)
-		if trimmed != "" {
-			brokers = append(brokers, trimmed)
-		}
-	}
-	return brokers
 }
