@@ -1,9 +1,8 @@
 package starter
 
 type ListStartersRequest struct {
-	BusinessUnitID *int64  `form:"business_unit_id" binding:"omitempty,gt=0"`
-	DepartmentID   *int64  `form:"department_id" binding:"omitempty,gt=0"`
-	Query          *string `form:"q"`
+	Query    *string `form:"q"`
+	SearchBy string  `form:"search_by" binding:"omitempty,oneof=fullname domain dept_name bu_name"`
 
 	SortBy    string `form:"sort_by" binding:"omitempty,oneof=id domain created_at"`
 	SortOrder string `form:"sort_order" binding:"omitempty,oneof=asc desc"`

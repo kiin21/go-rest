@@ -40,44 +40,25 @@ func (s *StarterApplicationService) ListStarters(
 	ctx context.Context,
 	query starterquery.ListStartersQuery,
 ) (*httputil.PaginatedResult[*model.Starter], error) {
-	sortBy := query.SortBy
-	if sortBy == "" {
-		sortBy = "id"
-	}
-	sortOrder := query.SortOrder
-	if sortOrder == "" {
-		sortOrder = "asc"
-	}
 
+	// Use Elasticsearch if a keyword is provided and Elasticsearch is enabled
 	if query.Keyword != "" && s.searchService != nil {
-		searchQuery := starterquery.SearchStartersQuery{
-			Keyword:        query.Keyword,
-			DepartmentID:   query.DepartmentID,
-			BusinessUnitID: query.BusinessUnitID,
-			Pagination:     query.Pagination,
-			SortBy:         sortBy,
-			SortOrder:      sortOrder,
-		}
-		return s.searchService.Search(ctx, searchQuery)
+		log.Println("Using Elasticsearch for search")
+		return s.searchService.Search(ctx, query)
 	}
 
-	filter := model.StarterListFilter{
-		DepartmentID:   query.DepartmentID,
-		BusinessUnitID: query.BusinessUnitID,
-		SortBy:         sortBy,
-		SortOrder:      sortOrder,
-	}
-
+	// Use MySQL if a keyword is provided
+	// TODO: refactor
 	var (
 		starters []*model.Starter
 		total    int64
 		err      error
 	)
-
+	log.Printf("Using MySQL for search: keyword=%s", query.Keyword)
 	if query.Keyword != "" {
-		starters, total, err = s.repo.SearchByKeyword(ctx, query.Keyword, filter, query.Pagination)
+		starters, total, err = s.repo.SearchByKeyword(ctx, query)
 	} else {
-		starters, total, err = s.repo.List(ctx, filter, query.Pagination)
+		starters, total, err = s.repo.SearchByKeyword(ctx, query)
 	}
 	if err != nil {
 		return nil, err
@@ -218,14 +199,15 @@ func (s *StarterApplicationService) UpdateStarter(ctx context.Context, command s
 // SoftDeleteStarter soft deletes a starter by domain
 func (s *StarterApplicationService) SoftDeleteStarter(ctx context.Context, domain string) error {
 	// Soft delete from MySQL
-	if err := s.repo.SoftDelete(ctx, domain); err != nil {
+	entity, err := s.repo.SoftDelete(ctx, domain)
+	if err != nil {
 		return err
 	}
 
 	// Remove from Elasticsearch index (async, non-blocking)
 	if s.searchService != nil {
 		go func() {
-			if err := s.searchService.DeleteFromIndex(context.Background(), domain); err != nil {
+			if err := s.searchService.DeleteFromIndex(context.Background(), entity); err != nil {
 				log.Printf("Failed to delete starter from Elasticsearch: %v", err)
 			}
 		}()

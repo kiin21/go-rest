@@ -91,7 +91,7 @@ func FromDomainEnrichment(enriched *model.EnrichedData) *StarterEnrichedData {
 	return result
 }
 
-// FromDomainEnriched converts domain entity to enriched response with related data
+// FromDomainEnriched converts domain document to enriched response with related data
 func FromDomainEnriched(starter *model.Starter, enriched *StarterEnrichedData) *StarterResponse {
 	if starter == nil {
 		return nil

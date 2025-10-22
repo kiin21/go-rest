@@ -78,49 +78,6 @@ func (im *IndexManager) ResetIndex(ctx context.Context) error {
 	return im.CreateIndex(ctx)
 }
 
-func (im *IndexManager) GetIndexStats(ctx context.Context) (map[string]interface{}, error) {
-	req := esapi.IndicesStatsRequest{
-		Index: []string{starterIndexName},
-	}
-
-	res, err := req.Do(ctx, im.client)
-	if err != nil {
-		return nil, fmt.Errorf("error getting index stats: %w", err)
-	}
-	defer res.Body.Close()
-
-	if res.IsError() {
-		body, _ := io.ReadAll(res.Body)
-		return nil, fmt.Errorf("error getting index stats: %s", string(body))
-	}
-
-	var stats map[string]interface{}
-	if err := json.NewDecoder(res.Body).Decode(&stats); err != nil {
-		return nil, fmt.Errorf("error parsing stats response: %w", err)
-	}
-
-	return stats, nil
-}
-
-func (im *IndexManager) RefreshIndex(ctx context.Context) error {
-	req := esapi.IndicesRefreshRequest{
-		Index: []string{starterIndexName},
-	}
-
-	res, err := req.Do(ctx, im.client)
-	if err != nil {
-		return fmt.Errorf("error refreshing index: %w", err)
-	}
-	defer res.Body.Close()
-
-	if res.IsError() {
-		body, _ := io.ReadAll(res.Body)
-		return fmt.Errorf("error refreshing index: %s", string(body))
-	}
-
-	return nil
-}
-
 func (im *IndexManager) GetDocumentCount(ctx context.Context) (int64, error) {
 	req := esapi.CountRequest{
 		Index: []string{starterIndexName},

@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/notifications": {
             "get": {
-                "description": "Retrieve notifications with pagination and sorting options.",
+                "description": "Retrieve notifications with pagination and sorting options",
                 "produces": [
                     "application/json"
                 ],
@@ -34,7 +34,8 @@ const docTemplate = `{
                             "timestamp"
                         ],
                         "type": "string",
-                        "description": "Sort notifications by field",
+                        "default": "timestamp",
+                        "description": "Sort field",
                         "name": "sort_by",
                         "in": "query"
                     },
@@ -44,7 +45,8 @@ const docTemplate = `{
                             "desc"
                         ],
                         "type": "string",
-                        "description": "Sort order direction",
+                        "default": "desc",
+                        "description": "Sort order",
                         "name": "sort_order",
                         "in": "query"
                     },
@@ -61,7 +63,7 @@ const docTemplate = `{
                         "minimum": 1,
                         "type": "integer",
                         "default": 20,
-                        "description": "Items per page",
+                        "description": "Page size",
                         "name": "limit",
                         "in": "query"
                     }
@@ -128,24 +130,7 @@ const docTemplate = `{
                     }
                 },
                 "pagination": {
-                    "$ref": "#/definitions/dto.ListNotiPagination"
-                }
-            }
-        },
-        "dto.ListNotiPagination": {
-            "type": "object",
-            "properties": {
-                "limit": {
-                    "type": "integer"
-                },
-                "next": {
-                    "type": "string"
-                },
-                "prev": {
-                    "type": "string"
-                },
-                "total_items": {
-                    "type": "integer"
+                    "$ref": "#/definitions/httputil.RespPagination"
                 }
             }
         },
@@ -169,6 +154,23 @@ const docTemplate = `{
                 },
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "httputil.RespPagination": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "next": {
+                    "type": "string"
+                },
+                "prev": {
+                    "type": "string"
+                },
+                "total_items": {
+                    "type": "integer"
                 }
             }
         }

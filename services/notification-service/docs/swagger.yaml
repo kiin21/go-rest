@@ -26,18 +26,7 @@ definitions:
           $ref: '#/definitions/dto.ListNotiResponse'
         type: array
       pagination:
-        $ref: '#/definitions/dto.ListNotiPagination'
-    type: object
-  dto.ListNotiPagination:
-    properties:
-      limit:
-        type: integer
-      next:
-        type: string
-      prev:
-        type: string
-      total_items:
-        type: integer
+        $ref: '#/definitions/httputil.RespPagination'
     type: object
   dto.ListNotiResponse:
     properties:
@@ -54,6 +43,17 @@ definitions:
       type:
         type: string
     type: object
+  httputil.RespPagination:
+    properties:
+      limit:
+        type: integer
+      next:
+        type: string
+      prev:
+        type: string
+      total_items:
+        type: integer
+    type: object
 info:
   contact: {}
   description: REST APIs for managing notifications.
@@ -62,9 +62,10 @@ info:
 paths:
   /notifications:
     get:
-      description: Retrieve notifications with pagination and sorting options.
+      description: Retrieve notifications with pagination and sorting options
       parameters:
-      - description: Sort notifications by field
+      - default: timestamp
+        description: Sort field
         enum:
         - from
         - to
@@ -73,7 +74,8 @@ paths:
         in: query
         name: sort_by
         type: string
-      - description: Sort order direction
+      - default: desc
+        description: Sort order
         enum:
         - asc
         - desc
@@ -87,7 +89,7 @@ paths:
         name: page
         type: integer
       - default: 20
-        description: Items per page
+        description: Page size
         in: query
         maximum: 100
         minimum: 1

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kiin21/go-rest/pkg/httputil"
+	starterquery "github.com/kiin21/go-rest/services/starter-service/internal/starter/application/dto/starter/query"
 	sharedDomain "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/error"
 	"github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/model"
 	repo "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/repository"
@@ -49,67 +49,12 @@ func (r *StarterRepository) FindByDomain(ctx context.Context, domain string) (*m
 	return r.toModel(&starterEntity)
 }
 
-func (r *StarterRepository) List(ctx context.Context, filter model.StarterListFilter, pg httputil.ReqPagination) ([]*model.Starter, int64, error) {
-	query := r.db.WithContext(ctx).Model(&entity.StarterEntity{}).Where("deleted_at IS NULL")
-
-	// Apply filters
-	if filter.DepartmentID != nil {
-		query = query.Where("department_id = ?", *filter.DepartmentID)
-	}
-	if filter.BusinessUnitID != nil {
-		query = query.Joins("JOIN departments ON starters.department_id = departments.id").
-			Where("departments.business_unit_id = ?", *filter.BusinessUnitID)
-	}
-	if filter.LineManagerID != nil {
-		query = query.Where("line_manager_id = ?", *filter.LineManagerID)
-	}
-
-	// Count total
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	query = r.applySort(query, filter.SortBy, filter.SortOrder)
-
-	// Apply pagination
-	offset := (pg.Page - 1) * pg.Limit
-	query = query.Offset(offset).Limit(pg.Limit)
-
-	var models []entity.StarterEntity
-	if err := query.Find(&models).Error; err != nil {
-		return nil, 0, err
-	}
-
-	starters := make([]*model.Starter, 0, len(models))
-	for i := range models {
-		starterModel, err := r.toModel(&models[i])
-		if err != nil {
-			return nil, 0, err
-		}
-		starters = append(starters, starterModel)
-	}
-
-	return starters, total, nil
-}
-
-func (r *StarterRepository) SearchByKeyword(ctx context.Context, keyword string, filter model.StarterListFilter, pg httputil.ReqPagination) ([]*model.Starter, int64, error) {
+func (r *StarterRepository) SearchByKeyword(ctx context.Context, listStarterQuery starterquery.ListStartersQuery) ([]*model.Starter, int64, error) {
 	query := r.db.WithContext(ctx).Model(&entity.StarterEntity{}).Where("deleted_at IS NULL")
 
 	// Apply keyword search
-	searchPattern := "%" + keyword + "%"
-	query = query.Where("domain LIKE ? OR name LIKE ? OR email LIKE ?", searchPattern, searchPattern, searchPattern)
-
-	// Apply filters
-	if filter.DepartmentID != nil {
-		query = query.Where("department_id = ?", *filter.DepartmentID)
-	}
-	if filter.BusinessUnitID != nil {
-		query = query.Joins("JOIN departments ON starters.department_id = departments.id").
-			Where("departments.business_unit_id = ?", *filter.BusinessUnitID)
-	}
-	if filter.LineManagerID != nil {
-		query = query.Where("line_manager_id = ?", *filter.LineManagerID)
+	if listStarterQuery.Keyword != "" && listStarterQuery.SearchBy != "" {
+		query = query.Where("? LIKE %?%", listStarterQuery.SearchBy, listStarterQuery.Keyword)
 	}
 
 	// Count total
@@ -118,11 +63,11 @@ func (r *StarterRepository) SearchByKeyword(ctx context.Context, keyword string,
 		return nil, 0, err
 	}
 
-	query = r.applySort(query, filter.SortBy, filter.SortOrder)
+	query = r.applySort(query, listStarterQuery.SortBy, listStarterQuery.SortOrder)
 
 	// Apply pagination
-	offset := (pg.Page - 1) * pg.Limit
-	query = query.Offset(offset).Limit(pg.Limit)
+	offset := (listStarterQuery.Pagination.Page - 1) * listStarterQuery.Pagination.Limit
+	query = query.Offset(offset).Limit(listStarterQuery.Pagination.Limit)
 
 	var models []entity.StarterEntity
 	if err := query.Find(&models).Error; err != nil {
@@ -151,11 +96,19 @@ func (r *StarterRepository) Update(ctx context.Context, starter *model.Starter) 
 	return r.db.WithContext(ctx).Save(domainAggregate).Error
 }
 
-func (r *StarterRepository) SoftDelete(ctx context.Context, domain string) error {
+func (r *StarterRepository) SoftDelete(ctx context.Context, domain string) (*model.Starter, error) {
+	var starterEntity entity.StarterEntity
+
 	now := time.Now()
-	return r.db.WithContext(ctx).Model(&entity.StarterEntity{}).
+	err := r.db.WithContext(ctx).Model(&entity.StarterEntity{}).
 		Where("domain = ? AND deleted_at IS NULL", domain).
-		Update("deleted_at", now).Error
+		Update("deleted_at", now).First(&starterEntity).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return r.toModel(&starterEntity)
 }
 
 // Helper methods for domain conversion

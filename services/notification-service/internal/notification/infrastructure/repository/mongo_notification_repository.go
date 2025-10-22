@@ -3,14 +3,14 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
-	"time"
 
 	"github.com/kiin21/go-rest/pkg/httputil"
 	domainModel "github.com/kiin21/go-rest/services/notification-service/internal/notification/domain/model"
 	domainRepo "github.com/kiin21/go-rest/services/notification-service/internal/notification/domain/repository"
+	"github.com/kiin21/go-rest/services/notification-service/internal/notification/infrastructure/repository/document"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -43,15 +43,7 @@ func (r *notificationMongoRepository) List(
 	}
 
 	sortBy := mapSortField(filter.SortBy)
-
-	sortOrder := 1
-	if filter.SortOrder != "" {
-		if strings.EqualFold(filter.SortOrder, "desc") {
-			sortOrder = -1
-		}
-	} else if defaultSortOrder == "desc" {
-		sortOrder = -1
-	}
+	sortOrder := mapSortOrder(filter.SortOrder)
 
 	findOptions := options.Find()
 	findOptions.SetSort(bson.D{{Key: sortBy, Value: sortOrder}})
@@ -62,15 +54,21 @@ func (r *notificationMongoRepository) List(
 	if err != nil {
 		return nil, 0, err
 	}
-	defer cursor.Close(ctx)
+
+	defer func(cursor *mongo.Cursor, ctx context.Context) {
+		err := cursor.Close(ctx)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}(cursor, ctx)
 
 	results := make([]*domainModel.Notification, 0, pagination.Limit)
 	for cursor.Next(ctx) {
-		var doc notificationDocument
+		var doc document.NotificationDocument
 		if err := cursor.Decode(&doc); err != nil {
 			return nil, 0, err
 		}
-		results = append(results, doc.toDomain())
+		results = append(results, doc.ToDomain())
 	}
 	if err := cursor.Err(); err != nil {
 		return nil, 0, err
@@ -89,47 +87,10 @@ func (r *notificationMongoRepository) Create(ctx context.Context, notification *
 		return errors.New("notification is nil")
 	}
 
-	ts := notification.Timestamp
-	if ts.IsZero() {
-		ts = time.Now().UTC()
-	}
-
-	doc := notificationDocument{
-		ID:          primitive.NewObjectID(),
-		FromStarter: notification.FromStarter,
-		ToStarter:   notification.ToStarter,
-		Message:     notification.Message,
-		Type:        notification.Type,
-		Timestamp:   ts,
-	}
-
-	if _, err := r.collection.InsertOne(ctx, doc); err != nil {
+	if _, err := r.collection.InsertOne(ctx, notification); err != nil {
 		return err
 	}
-
-	notification.ID = doc.ID.Hex()
-	notification.Timestamp = ts
 	return nil
-}
-
-type notificationDocument struct {
-	ID          primitive.ObjectID `bson:"_id"`
-	FromStarter string             `bson:"from_starter"`
-	ToStarter   string             `bson:"to_starter"`
-	Message     string             `bson:"message"`
-	Type        string             `bson:"type"`
-	Timestamp   time.Time          `bson:"timestamp"`
-}
-
-func (d *notificationDocument) toDomain() *domainModel.Notification {
-	return &domainModel.Notification{
-		ID:          d.ID.Hex(),
-		FromStarter: d.FromStarter,
-		ToStarter:   d.ToStarter,
-		Message:     d.Message,
-		Type:        d.Type,
-		Timestamp:   d.Timestamp,
-	}
 }
 
 func mapSortField(input string) string {
@@ -144,5 +105,16 @@ func mapSortField(input string) string {
 		return "type"
 	default:
 		return defaultSortBy
+	}
+}
+
+func mapSortOrder(input string) string {
+	switch strings.ToLower(input) {
+	case "asc":
+		return "asc"
+	case "desc":
+		return "desc"
+	default:
+		return defaultSortOrder
 	}
 }

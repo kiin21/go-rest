@@ -29,7 +29,7 @@ type BusinessUnitDetailResponse struct {
 	UpdatedAt time.Time                 `json:"updated_at"`
 }
 
-// FromBusinessUnitWithDetails converts a detailed domain entity to a detailed response DTO.
+// FromBusinessUnitWithDetails converts a detailed domain document to a detailed response DTO.
 func FromBusinessUnitWithDetails(unit *model.BusinessUnitWithDetails) *BusinessUnitDetailResponse {
 	if unit == nil {
 		return nil

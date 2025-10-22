@@ -40,6 +40,8 @@ WORKDIR /home/appuser
 
 # Copy built binary
 COPY --from=builder /app/main .
+# Copy environment defaults for runtime
+COPY services/notification-service/.env_dev .env_dev
 
 # Change ownership
 RUN chown -R appuser:appgroup /home/appuser

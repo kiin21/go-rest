@@ -3,68 +3,40 @@ package initialize
 import (
 	"net/http"
 
-	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/gin-gonic/gin"
 	"github.com/kiin21/go-rest/pkg/httputil"
 	"github.com/kiin21/go-rest/services/starter-service/docs"
-	initStarter "github.com/kiin21/go-rest/services/starter-service/internal/initialize/starter"
 	"github.com/kiin21/go-rest/services/starter-service/internal/middleware"
-	domainmessaging "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/messaging"
-	persistentMySQL "github.com/kiin21/go-rest/services/starter-service/internal/starter/infrastructure/persistence/repository/mysql"
 	orgHttp "github.com/kiin21/go-rest/services/starter-service/internal/starter/presentation/http"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"gorm.io/gorm"
 )
 
 func InitRouter(
-	db *gorm.DB,
-	esClient *elasticsearch.Client,
-	isLogger string,
-	notificationPublisher domainmessaging.NotificationPublisher,
-	kafkaBrokers string,
-	kafkaSyncTopic string,
-	kafkaConsumerGroup string,
+	logLevel string,
+	requestURLResolver httputil.RequestURLResolver,
+	orgHandler *orgHttp.OrganizationHandler,
+	starterHandler *orgHttp.StarterHandler,
 ) *gin.Engine {
-	router := newGinEngine(isLogger)
-	requestURLResolver := httputil.NewRequestURLResolver()
+	router := newGinEngine(logLevel)
 
-	registerHealthCheck(router)
+	router.GET("/health", func(ctx *gin.Context) {
+		ctx.JSON(http.StatusOK, gin.H{"status": "healthy"})
+	})
+
 	registerSwaggerRoutes(router, requestURLResolver)
 
 	v1 := router.Group("/api/v1")
 
-	starterRepo := persistentMySQL.NewStarterRepository(db)
-	businessUnitRepo := persistentMySQL.NewBusinessUnitRepository(db)
-	departmentRepo := persistentMySQL.NewDepartmentRepository(db)
-
-	orgHandler := initStarter.InitOrganization(
-		requestURLResolver,
-		starterRepo,
-		departmentRepo,
-		businessUnitRepo,
-		notificationPublisher,
-	)
-
-	starterHandler := initStarter.InitStarter(
-		esClient,
-		starterRepo,
-		departmentRepo,
-		businessUnitRepo,
-		requestURLResolver,
-		kafkaBrokers,
-		kafkaSyncTopic,
-		kafkaConsumerGroup,
-	)
-
-	registerAPIRoutes(v1, orgHandler, starterHandler)
+	orgHttp.RegisterOrganizationRoutes(v1, orgHandler)
+	orgHttp.RegisterStarterRoutes(v1, starterHandler)
 
 	return router
 }
 
-func newGinEngine(isLogger string) *gin.Engine {
+func newGinEngine(logLevel string) *gin.Engine {
 	var router *gin.Engine
-	if isLogger == "debug" {
+	if logLevel == "debug" {
 		gin.SetMode(gin.DebugMode)
 		gin.ForceConsoleColor()
 		router = gin.Default()
@@ -76,12 +48,6 @@ func newGinEngine(isLogger string) *gin.Engine {
 	return router
 }
 
-func registerHealthCheck(router *gin.Engine) {
-	router.GET("/health", func(ctx *gin.Context) {
-		ctx.JSON(http.StatusOK, gin.H{"status": "healthy"})
-	})
-}
-
 func registerSwaggerRoutes(router *gin.Engine, requestURLResolver httputil.RequestURLResolver) {
 	swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler)
 	router.GET("/swagger/*any", func(ctx *gin.Context) {
@@ -91,13 +57,4 @@ func registerSwaggerRoutes(router *gin.Engine, requestURLResolver httputil.Reque
 		}
 		swaggerHandler(ctx)
 	})
-}
-
-func registerAPIRoutes(
-	group *gin.RouterGroup,
-	organizationHandler *orgHttp.OrganizationHandler,
-	starterHandler *orgHttp.StarterHandler,
-) {
-	orgHttp.RegisterOrganizationRoutes(group, organizationHandler)
-	orgHttp.RegisterStarterRoutes(group, starterHandler)
 }

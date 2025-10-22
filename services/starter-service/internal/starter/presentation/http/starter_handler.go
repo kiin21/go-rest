@@ -11,7 +11,15 @@ import (
 	"github.com/kiin21/go-rest/services/starter-service/internal/starter/application/service"
 	sharedDomain "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/error"
 	"github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/model"
+	shareddto "github.com/kiin21/go-rest/services/starter-service/internal/starter/presentation/http/dto/shared"
 	starterdto "github.com/kiin21/go-rest/services/starter-service/internal/starter/presentation/http/dto/starter"
+)
+
+var (
+	_ shareddto.GenericAPIResponse
+	_ starterdto.StarterListAPIResponse
+	_ starterdto.StarterAPIResponse
+	_ starterdto.StarterDeleteAPIResponse
 )
 
 type StarterHandler struct {
@@ -31,18 +39,18 @@ func NewStarterHandler(
 
 // ListStarters godoc
 // @Summary List starters
-// @Description Retrieve starters with optional filters and pagination
+// @Description Retrieve starters with optional search and pagination
 // @Tags Starters
 // @Produce json
-// @Param business_unit_id query int false "Filter by business unit"
-// @Param department_id query int false "Filter by department"
 // @Param q query string false "Keyword search"
-// @Param sort_by query string false "Sort field"
-// @Param sort_order query string false "Sort order"
-// @Param page query int false "Page number"
-// @Param limit query int false "Items per page"
-// @Success 200 {object} httputil.APIResponse
-// @Failure 400 {object} httputil.APIResponse
+// @Param search_by query string false "Search field" Enums(fullname,domain,dept_name,bu_name)
+// @Param sort_by query string false "Sort field" Enums(id,domain,created_at) default(id)
+// @Param sort_order query string false "Sort order" Enums(asc,desc) default(asc)
+// @Param page query int false "Page number" minimum(1) default(1)
+// @Param limit query int false "Page size" minimum(1) maximum(100) default(20)
+// @Success 200 {object} starterdto.StarterListAPIResponse
+// @Failure 400 {object} shareddto.GenericAPIResponse
+// @Failure 500 {object} shareddto.GenericAPIResponse
 // @Router /starters [get]
 func (sh *StarterHandler) ListStarters(ctx *gin.Context) {
 	httputil.Wrap(sh.listStarters)(ctx)
@@ -66,11 +74,10 @@ func (sh *StarterHandler) listStarters(ctx *gin.Context) (res interface{}, err e
 			Page:  req.Page,
 			Limit: req.Limit,
 		},
-		Keyword:        keyword,
-		BusinessUnitID: req.BusinessUnitID,
-		DepartmentID:   req.DepartmentID,
-		SortBy:         req.SortBy,
-		SortOrder:      req.SortOrder,
+		Keyword:   keyword,
+		SearchBy:  req.SearchBy,
+		SortBy:    req.SortBy,
+		SortOrder: req.SortOrder,
 	}
 
 	rawResult, err := sh.service.ListStarters(ctx, query)
@@ -93,16 +100,16 @@ func (sh *StarterHandler) listStarters(ctx *gin.Context) (res interface{}, err e
 }
 
 // CreateStarter godoc
-// @Summary Create a starter
+// @Summary Create starter
 // @Description Create a new starter record
 // @Tags Starters
 // @Accept json
 // @Produce json
 // @Param request body starterdto.CreateStarterRequest true "Starter payload"
-// @Success 201 {object} httputil.APIResponse
-// @Failure 400 {object} httputil.APIResponse
-// @Failure 409 {object} httputil.APIResponse
-// @Failure 500 {object} httputil.APIResponse
+// @Success 200 {object} starterdto.StarterAPIResponse
+// @Failure 400 {object} shareddto.GenericAPIResponse
+// @Failure 409 {object} shareddto.GenericAPIResponse
+// @Failure 500 {object} shareddto.GenericAPIResponse
 // @Router /starters [post]
 func (sh *StarterHandler) CreateStarter(ctx *gin.Context) {
 	httputil.Wrap(sh.createStarter)(ctx)
@@ -149,12 +156,14 @@ func (sh *StarterHandler) createStarter(ctx *gin.Context) (res interface{}, err 
 
 // Find godoc
 // @Summary Get starter detail
-// @Description Get a starter by domain
+// @Description Retrieve a starter by domain
 // @Tags Starters
 // @Produce json
 // @Param domain path string true "Starter domain"
-// @Success 200 {object} httputil.APIResponse
-// @Failure 404 {object} httputil.APIResponse
+// @Success 200 {object} starterdto.StarterAPIResponse
+// @Failure 400 {object} shareddto.GenericAPIResponse
+// @Failure 404 {object} shareddto.GenericAPIResponse
+// @Failure 500 {object} shareddto.GenericAPIResponse
 // @Router /starters/{domain} [get]
 func (sh *StarterHandler) Find(ctx *gin.Context) {
 	httputil.Wrap(sh.find)(ctx)
@@ -189,9 +198,10 @@ func (sh *StarterHandler) find(ctx *gin.Context) (res interface{}, err error) {
 // @Produce json
 // @Param domain path string true "Starter domain"
 // @Param request body starterdto.UpdateStarterRequest true "Update payload"
-// @Success 200 {object} httputil.APIResponse
-// @Failure 400 {object} httputil.APIResponse
-// @Failure 404 {object} httputil.APIResponse
+// @Success 200 {object} starterdto.StarterAPIResponse
+// @Failure 400 {object} shareddto.GenericAPIResponse
+// @Failure 404 {object} shareddto.GenericAPIResponse
+// @Failure 500 {object} shareddto.GenericAPIResponse
 // @Router /starters/{domain} [patch]
 func (sh *StarterHandler) UpdateStarter(ctx *gin.Context) {
 	httputil.Wrap(sh.updateStarter)(ctx)
@@ -246,8 +256,10 @@ func (sh *StarterHandler) updateStarter(ctx *gin.Context) (res interface{}, err 
 // @Tags Starters
 // @Produce json
 // @Param domain path string true "Starter domain"
-// @Success 200 {object} httputil.APIResponse
-// @Failure 404 {object} httputil.APIResponse
+// @Success 200 {object} starterdto.StarterDeleteAPIResponse
+// @Failure 400 {object} shareddto.GenericAPIResponse
+// @Failure 404 {object} shareddto.GenericAPIResponse
+// @Failure 500 {object} shareddto.GenericAPIResponse
 // @Router /starters/{domain} [delete]
 func (sh *StarterHandler) SoftDeleteStarter(ctx *gin.Context) {
 	httputil.Wrap(sh.softDeleteStarter)(ctx)

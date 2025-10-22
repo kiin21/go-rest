@@ -5,8 +5,7 @@ import "github.com/kiin21/go-rest/pkg/httputil"
 type SearchStartersQuery struct {
 	Keyword string
 
-	DepartmentID   *int64
-	BusinessUnitID *int64
+	SearchBy string
 
 	Pagination httputil.ReqPagination
 

@@ -27,14 +27,19 @@ const docTemplate = `{
                 "summary": "List business units",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
+                        "default": 1,
                         "description": "Page number",
                         "name": "page",
                         "in": "query"
                     },
                     {
+                        "maximum": 100,
+                        "minimum": 1,
                         "type": "integer",
-                        "description": "Items per page",
+                        "default": 10,
+                        "description": "Page size",
                         "name": "limit",
                         "in": "query"
                     }
@@ -43,13 +48,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/businessunit.BusinessUnitListAPIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     }
                 }
@@ -67,6 +78,7 @@ const docTemplate = `{
                 "summary": "Get business unit detail",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
                         "description": "Business unit ID",
                         "name": "id",
@@ -78,19 +90,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/businessunit.BusinessUnitDetailAPIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     }
                 }
@@ -98,7 +116,7 @@ const docTemplate = `{
         },
         "/departments": {
             "get": {
-                "description": "Retrieve departments with optional filters",
+                "description": "Retrieve departments with optional business unit filter and pagination",
                 "produces": [
                     "application/json"
                 ],
@@ -108,20 +126,26 @@ const docTemplate = `{
                 "summary": "List departments",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
-                        "description": "Filter by business unit",
+                        "description": "Filter by business unit ID",
                         "name": "business_unit_id",
                         "in": "query"
                     },
                     {
+                        "minimum": 1,
                         "type": "integer",
+                        "default": 1,
                         "description": "Page number",
                         "name": "page",
                         "in": "query"
                     },
                     {
+                        "maximum": 100,
+                        "minimum": 1,
                         "type": "integer",
-                        "description": "Items per page",
+                        "default": 10,
+                        "description": "Page size",
                         "name": "limit",
                         "in": "query"
                     }
@@ -130,13 +154,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/department.DepartmentListAPIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     }
                 }
@@ -160,27 +190,27 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_internal_organization_presentation_http_dto_department.CreateDepartmentRequest"
+                            "$ref": "#/definitions/department.CreateDepartmentRequest"
                         }
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/department.DepartmentDetailAPIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     }
                 }
@@ -198,6 +228,7 @@ const docTemplate = `{
                 "summary": "Get department detail",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
                         "description": "Department ID",
                         "name": "id",
@@ -209,19 +240,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/department.DepartmentDetailAPIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     }
                 }
@@ -237,6 +274,7 @@ const docTemplate = `{
                 "summary": "Delete department",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
                         "description": "Department ID",
                         "name": "id",
@@ -248,25 +286,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/department.DepartmentDeleteAPIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     }
                 }
             },
             "patch": {
-                "description": "Update department information",
+                "description": "Update department information by ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -279,6 +323,7 @@ const docTemplate = `{
                 "summary": "Update department",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
                         "description": "Department ID",
                         "name": "id",
@@ -291,7 +336,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_internal_organization_presentation_http_dto_department.UpdateDepartmentRequest"
+                            "$ref": "#/definitions/department.UpdateDepartmentRequest"
                         }
                     }
                 ],
@@ -299,19 +344,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/department.DepartmentDetailAPIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     }
                 }
@@ -332,6 +383,7 @@ const docTemplate = `{
                 "summary": "Assign department leader",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
                         "description": "Department ID",
                         "name": "id",
@@ -344,7 +396,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_internal_organization_presentation_http_dto_department.AssignLeaderRequest"
+                            "$ref": "#/definitions/department.AssignLeaderRequest"
                         }
                     }
                 ],
@@ -352,19 +404,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/department.DepartmentDetailAPIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     }
                 }
@@ -372,7 +430,7 @@ const docTemplate = `{
         },
         "/starters": {
             "get": {
-                "description": "Retrieve starters with optional filters and pagination",
+                "description": "Retrieve starters with optional search and pagination",
                 "produces": [
                     "application/json"
                 ],
@@ -382,44 +440,60 @@ const docTemplate = `{
                 "summary": "List starters",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "Filter by business unit",
-                        "name": "business_unit_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Filter by department",
-                        "name": "department_id",
-                        "in": "query"
-                    },
-                    {
                         "type": "string",
                         "description": "Keyword search",
                         "name": "q",
                         "in": "query"
                     },
                     {
+                        "enum": [
+                            "fullname",
+                            "domain",
+                            "dept_name",
+                            "bu_name"
+                        ],
                         "type": "string",
+                        "description": "Search field",
+                        "name": "search_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "id",
+                            "domain",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "id",
                         "description": "Sort field",
                         "name": "sort_by",
                         "in": "query"
                     },
                     {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
                         "type": "string",
+                        "default": "asc",
                         "description": "Sort order",
                         "name": "sort_order",
                         "in": "query"
                     },
                     {
+                        "minimum": 1,
                         "type": "integer",
+                        "default": 1,
                         "description": "Page number",
                         "name": "page",
                         "in": "query"
                     },
                     {
+                        "maximum": 100,
+                        "minimum": 1,
                         "type": "integer",
-                        "description": "Items per page",
+                        "default": 20,
+                        "description": "Page size",
                         "name": "limit",
                         "in": "query"
                     }
@@ -428,13 +502,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/starter.StarterListAPIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     }
                 }
@@ -450,7 +530,7 @@ const docTemplate = `{
                 "tags": [
                     "Starters"
                 ],
-                "summary": "Create a starter",
+                "summary": "Create starter",
                 "parameters": [
                     {
                         "description": "Starter payload",
@@ -458,33 +538,33 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_internal_organization_presentation_http_dto_starter.CreateStarterRequest"
+                            "$ref": "#/definitions/starter.CreateStarterRequest"
                         }
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/starter.StarterAPIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     }
                 }
@@ -492,7 +572,7 @@ const docTemplate = `{
         },
         "/starters/{domain}": {
             "get": {
-                "description": "Get a starter by domain",
+                "description": "Retrieve a starter by domain",
                 "produces": [
                     "application/json"
                 ],
@@ -513,13 +593,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/starter.StarterAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     }
                 }
@@ -546,13 +638,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/starter.StarterDeleteAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     }
                 }
@@ -583,7 +687,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_internal_organization_presentation_http_dto_starter.UpdateStarterRequest"
+                            "$ref": "#/definitions/starter.UpdateStarterRequest"
                         }
                     }
                 ],
@@ -591,19 +695,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/starter.StarterAPIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kiin21_go-rest_pkg_httputil.APIResponse"
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/shared.GenericAPIResponse"
                         }
                     }
                 }
@@ -611,18 +721,88 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_kiin21_go-rest_internal_organization_presentation_http_dto_department.AssignLeaderRequest": {
+        "businessunit.BusinessUnitDetailAPIResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/businessunit.BusinessUnitDetailResponse"
+                },
+                "error": {},
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "businessunit.BusinessUnitDetailResponse": {
+            "type": "object",
+            "properties": {
+                "company": {
+                    "$ref": "#/definitions/shared.CompanyNested"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "leader": {
+                    "$ref": "#/definitions/shared.LineManagerNested"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "shortname": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "businessunit.BusinessUnitListAPIResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/businessunit.BusinessUnitListAPIResponseData"
+                },
+                "error": {},
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "businessunit.BusinessUnitListAPIResponseData": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/businessunit.BusinessUnitDetailResponse"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/httputil.RespPagination"
+                }
+            }
+        },
+        "department.AssignLeaderRequest": {
             "type": "object",
             "required": [
                 "leader"
             ],
             "properties": {
                 "leader": {
-                    "$ref": "#/definitions/github_com_kiin21_go-rest_internal_organization_presentation_http_dto_department.LeaderInfo"
+                    "$ref": "#/definitions/department.LeaderInfo"
                 }
             }
         },
-        "github_com_kiin21_go-rest_internal_organization_presentation_http_dto_department.CreateDepartmentRequest": {
+        "department.CreateDepartmentRequest": {
             "type": "object",
             "required": [
                 "full_name",
@@ -650,7 +830,112 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_kiin21_go-rest_internal_organization_presentation_http_dto_department.LeaderInfo": {
+        "department.DepartmentDeleteAPIResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/department.DepartmentDeleteResponseData"
+                },
+                "error": {},
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "department.DepartmentDeleteResponseData": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "department.DepartmentDetailAPIResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/department.DepartmentDetailResponse"
+                },
+                "error": {},
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "department.DepartmentDetailResponse": {
+            "type": "object",
+            "properties": {
+                "business_unit": {
+                    "$ref": "#/definitions/shared.BusinessUnitNested"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "leader": {
+                    "$ref": "#/definitions/shared.LineManagerNested"
+                },
+                "parent_department": {
+                    "$ref": "#/definitions/shared.DepartmentNested"
+                },
+                "shortname": {
+                    "type": "string"
+                },
+                "sub_departments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/shared.DepartmentNested"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "department.DepartmentListAPIResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/department.DepartmentListAPIResponseData"
+                },
+                "error": {},
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "department.DepartmentListAPIResponseData": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/department.DepartmentDetailResponse"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/httputil.RespPagination"
+                }
+            }
+        },
+        "department.LeaderInfo": {
             "type": "object",
             "properties": {
                 "domain": {
@@ -662,7 +947,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_kiin21_go-rest_internal_organization_presentation_http_dto_department.UpdateDepartmentRequest": {
+        "department.UpdateDepartmentRequest": {
             "type": "object",
             "properties": {
                 "business_unit_id": {
@@ -686,7 +971,113 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_kiin21_go-rest_internal_organization_presentation_http_dto_starter.CreateStarterRequest": {
+        "httputil.RespPagination": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "next": {
+                    "type": "string"
+                },
+                "prev": {
+                    "type": "string"
+                },
+                "total_items": {
+                    "type": "integer"
+                }
+            }
+        },
+        "shared.BusinessUnitNested": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "shortname": {
+                    "type": "string"
+                }
+            }
+        },
+        "shared.CompanyNested": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "shared.DepartmentNested": {
+            "type": "object",
+            "properties": {
+                "group_department": {
+                    "$ref": "#/definitions/shared.GroupDepartmentNested"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "shortname": {
+                    "type": "string"
+                }
+            }
+        },
+        "shared.GenericAPIResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {},
+                "error": {},
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "shared.GroupDepartmentNested": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "shortname": {
+                    "type": "string"
+                }
+            }
+        },
+        "shared.LineManagerNested": {
+            "type": "object",
+            "properties": {
+                "domain": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "job_title": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "starter.CreateStarterRequest": {
             "type": "object",
             "required": [
                 "department_id",
@@ -734,7 +1125,118 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_kiin21_go-rest_internal_organization_presentation_http_dto_starter.UpdateStarterRequest": {
+        "starter.StarterAPIResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/starter.StarterResponse"
+                },
+                "error": {},
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "starter.StarterDeleteAPIResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/starter.StarterDeleteResponseData"
+                },
+                "error": {},
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "starter.StarterDeleteResponseData": {
+            "type": "object",
+            "properties": {
+                "domain": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "starter.StarterListAPIResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/starter.StarterListAPIResponseData"
+                },
+                "error": {},
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "starter.StarterListAPIResponseData": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/starter.StarterResponse"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/httputil.RespPagination"
+                }
+            }
+        },
+        "starter.StarterResponse": {
+            "type": "object",
+            "properties": {
+                "business_unit": {
+                    "$ref": "#/definitions/shared.BusinessUnitNested"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "department": {
+                    "$ref": "#/definitions/shared.DepartmentNested"
+                },
+                "domain": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "job_title": {
+                    "type": "string"
+                },
+                "line_manager": {
+                    "$ref": "#/definitions/shared.LineManagerNested"
+                },
+                "mobile": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "work_phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "starter.UpdateStarterRequest": {
             "type": "object",
             "required": [
                 "domain"
@@ -775,23 +1277,6 @@ const docTemplate = `{
                     "maxLength": 20
                 }
             }
-        },
-        "github_com_kiin21_go-rest_pkg_httputil.APIResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "data": {
-                    "description": "data return null not show"
-                },
-                "error": {
-                    "description": "Error return null not show"
-                },
-                "message": {
-                    "type": "string"
-                }
-            }
         }
     }
 }`
@@ -803,7 +1288,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "Starter Service API",
-	Description:      "REST APIs for managing starters and organizational resources.",
+	Description:      "REST APIs for managing starters and organizations.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

@@ -2,12 +2,13 @@ package service
 
 import (
 	"context"
+	"log"
 	"strconv"
 
 	"github.com/kiin21/go-rest/pkg/events"
 	"github.com/kiin21/go-rest/pkg/httputil"
-	sharedKafka "github.com/kiin21/go-rest/pkg/kafka"
 	starterquery "github.com/kiin21/go-rest/services/starter-service/internal/starter/application/dto/starter/query"
+	"github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/messaging"
 	"github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/model"
 	"github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/repository"
 )
@@ -15,13 +16,13 @@ import (
 type StarterSearchService struct {
 	searchRepo    repository.StarterSearchRepository
 	repo          repository.StarterRepository
-	kafkaProducer *sharedKafka.Producer
+	kafkaProducer messaging.NotificationProducer
 }
 
 func NewStarterSearchService(
 	searchRepo repository.StarterSearchRepository,
 	repo repository.StarterRepository,
-	kafkaProducer *sharedKafka.Producer,
+	kafkaProducer messaging.NotificationProducer,
 ) *StarterSearchService {
 	return &StarterSearchService{
 		searchRepo:    searchRepo,
@@ -32,27 +33,10 @@ func NewStarterSearchService(
 
 func (s *StarterSearchService) Search(
 	ctx context.Context,
-	query starterquery.SearchStartersQuery,
+	query starterquery.ListStartersQuery,
 ) (*httputil.PaginatedResult[*model.Starter], error) {
-
-	sortBy := query.SortBy
-	if sortBy == "" {
-		sortBy = "id"
-	}
-	sortOrder := query.SortOrder
-	if sortOrder == "" {
-		sortOrder = "asc"
-	}
-
-	filter := model.StarterListFilter{
-		DepartmentID:   query.DepartmentID,
-		BusinessUnitID: query.BusinessUnitID,
-		SortBy:         sortBy,
-		SortOrder:      sortOrder,
-	}
-
 	// Elasticsearch
-	starters, total, err := s.searchRepo.Search(ctx, query.Keyword, filter, query.Pagination)
+	starters, total, err := s.searchRepo.Search(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -89,47 +73,62 @@ func (s *StarterSearchService) IndexStarter(ctx context.Context, starter *model.
 		return nil
 	}
 
-	event, err := events.NewEvent(
-		events.EventTypeStarterIndex,
-		events.WithDomain(starter.Domain()),
-	)
-	if err != nil {
+	// Create an event payload
+	payload := events.IndexStarterPayload{
+		StarterID: starter.ID(),
+		Domain:    starter.Domain(),
+		Name:      starter.Name(),
+	}
+
+	event := events.NewEvent(events.EventTypeStarterIndex, payload)
+	event.Key = starter.Domain()
+
+	if err := s.kafkaProducer.SendNotification(event); err != nil {
+		log.Printf("Failed to send starter index event: %v", err)
 		return err
 	}
 
-	_, _, err = s.kafkaProducer.PublishEvent(event)
-	return err
+	return nil
 }
 
 // DeleteFromIndex publishes a starter deletion event to Kafka (call after SoftDelete)
-func (s *StarterSearchService) DeleteFromIndex(ctx context.Context, domain string) error {
+func (s *StarterSearchService) DeleteFromIndex(ctx context.Context, starter *model.Starter) error {
 	if s.kafkaProducer == nil {
 		return nil
 	}
 
-	event, err := events.NewEvent(
-		events.EventTypeStarterDelete,
-		events.WithDomain(domain),
-	)
-	if err != nil {
+	// Create an event payload
+	payload := events.IndexStarterPayload{
+		StarterID: starter.ID(),
+		Domain:    starter.Domain(),
+		Name:      starter.Name(),
+	}
+
+	event := events.NewEvent(events.EventTypeStarterDelete, payload)
+	event.Key = starter.Domain() // Use domain as partition key
+
+	if err := s.kafkaProducer.SendNotification(event); err != nil {
+		log.Printf("Failed to send starter delete event: %v", err)
 		return err
 	}
 
-	_, _, err = s.kafkaProducer.PublishEvent(event)
-	return err
+	return nil
 }
 
-// ReindexAll reindexes all starters (for initial setup or data migration)
+// ReindexAll reindex all starters (for initial setup or data migration)
 func (s *StarterSearchService) ReindexAll(ctx context.Context) error {
 	const batchSize = 100
 	page := 1
 	totalIndexed := 0
 
 	for {
-		filter := model.StarterListFilter{}
-		pagination := httputil.ReqPagination{Page: page, Limit: batchSize}
+		emptyQuery := starterquery.ListStartersQuery{
+			Pagination: httputil.ReqPagination{
+				Page: page, Limit: batchSize,
+			},
+		}
 
-		starters, total, err := s.repo.List(ctx, filter, pagination)
+		starters, total, err := s.repo.SearchByKeyword(ctx, emptyQuery)
 		if err != nil {
 			return err
 		}
@@ -144,6 +143,7 @@ func (s *StarterSearchService) ReindexAll(ctx context.Context) error {
 		}
 
 		totalIndexed += len(starters)
+		log.Printf("Reindexed %d/%d starters", totalIndexed, total)
 
 		if int64(totalIndexed) >= total {
 			break
@@ -152,5 +152,6 @@ func (s *StarterSearchService) ReindexAll(ctx context.Context) error {
 		page++
 	}
 
+	log.Printf("✅ Reindexing completed: %d starters indexed", totalIndexed)
 	return nil
 }

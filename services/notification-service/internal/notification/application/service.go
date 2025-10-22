@@ -4,9 +4,7 @@ import (
 	"context"
 	"math"
 	"strconv"
-	"time"
 
-	"github.com/kiin21/go-rest/pkg/events"
 	"github.com/kiin21/go-rest/pkg/httputil"
 	domainmodel "github.com/kiin21/go-rest/services/notification-service/internal/notification/domain/model"
 	domainrepo "github.com/kiin21/go-rest/services/notification-service/internal/notification/domain/repository"
@@ -71,25 +69,4 @@ func (s *NotiApplicationService) ListNotifications(
 			Next:       next,
 		},
 	}, nil
-}
-
-func (s *NotiApplicationService) StoreNotification(ctx context.Context, event *events.LeaderAssignmentNotification) error {
-	if event == nil {
-		return nil
-	}
-
-	timestamp := event.Timestamp
-	if timestamp.IsZero() {
-		timestamp = time.Now().UTC()
-	}
-
-	notification := &domainmodel.Notification{
-		FromStarter: event.FromStarter,
-		ToStarter:   event.ToStarter,
-		Message:     event.Message,
-		Type:        event.Type,
-		Timestamp:   timestamp,
-	}
-
-	return s.repo.Create(ctx, notification)
 }

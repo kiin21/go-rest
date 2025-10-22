@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/kiin21/go-rest/pkg/events"
 	"github.com/kiin21/go-rest/pkg/httputil"
@@ -24,14 +23,14 @@ type OrganizationApplicationService struct {
 	departmentRepo   repository.DepartmentRepository
 	businessUnitRepo repository.BusinessUnitRepository
 	starterRepo      repository.StarterRepository
-	notificationPub  domainmessaging.NotificationPublisher
+	notificationPub  domainmessaging.NotificationProducer
 }
 
 func NewOrganizationApplicationService(
 	departmentRepo repository.DepartmentRepository,
 	businessUnitRepo repository.BusinessUnitRepository,
 	starterRepo repository.StarterRepository,
-	notificationPublisher domainmessaging.NotificationPublisher,
+	notificationPublisher domainmessaging.NotificationProducer,
 ) *OrganizationApplicationService {
 	return &OrganizationApplicationService{
 		departmentRepo:   departmentRepo,
@@ -242,15 +241,15 @@ func (s *OrganizationApplicationService) publishLeaderAssignmentNotification(ctx
 	}
 
 	message := fmt.Sprintf("You have been assigned as leader of %s", department.FullName)
-	event := &events.LeaderAssignmentNotification{
+	payload := events.LeaderAssignmentEventPayload{
 		FromStarter: fromDomain,
 		ToStarter:   toDomain,
 		Message:     message,
-		Type:        "leader_assignment",
-		Timestamp:   time.Now().UTC(),
 	}
 
-	if err := s.notificationPub.PublishLeaderAssignment(ctx, event); err != nil {
+	event := events.NewEvent(events.EventTypeNotificationLeaderAssignment, payload)
+
+	if err := s.notificationPub.SendNotification(event); err != nil {
 		log.Printf("failed to publish leader assignment notification: %v", err)
 	}
 }

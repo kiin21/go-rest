@@ -9,25 +9,24 @@ import (
 	"github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/repository"
 )
 
-// SyncEventHandler handles synchronization events between MySQL and Elasticsearch
-type SyncEventHandler struct {
+// EventHandler handles synchronization events between MySQL and Elasticsearch
+type EventHandler struct {
 	starterRepo repository.StarterRepository
 	searchRepo  repository.StarterSearchRepository
 }
 
-// NewSyncEventHandler creates a new sync event handler
-func NewSyncEventHandler(
+func NewEventHandler(
 	starterRepo repository.StarterRepository,
 	searchRepo repository.StarterSearchRepository,
-) *SyncEventHandler {
-	return &SyncEventHandler{
+) *EventHandler {
+	return &EventHandler{
 		starterRepo: starterRepo,
 		searchRepo:  searchRepo,
 	}
 }
 
 // Handle processes incoming sync events
-func (h *SyncEventHandler) Handle(ctx context.Context, event *events.Event) error {
+func (h *EventHandler) Handle(ctx context.Context, event *events.Event) error {
 	log.Printf("Processing event: type=%s, domain=%s, timestamp=%s",
 		event.Type, event.Domain, event.Timestamp)
 
@@ -38,12 +37,12 @@ func (h *SyncEventHandler) Handle(ctx context.Context, event *events.Event) erro
 		return h.handleDeleteEvent(ctx, event)
 	default:
 		log.Printf("Warning: unknown event type: %s", event.Type)
-		return nil // Don't fail on unknown events
+		return nil
 	}
 }
 
 // handleIndexEvent handles index/update/insert events
-func (h *SyncEventHandler) handleIndexEvent(ctx context.Context, event *events.Event) error {
+func (h *EventHandler) handleIndexEvent(ctx context.Context, event *events.Event) error {
 	// Fetch the latest data from MySQL
 	starter, err := h.starterRepo.FindByDomain(ctx, event.Domain)
 	if err != nil {
@@ -60,8 +59,15 @@ func (h *SyncEventHandler) handleIndexEvent(ctx context.Context, event *events.E
 }
 
 // handleDeleteEvent handles delete events
-func (h *SyncEventHandler) handleDeleteEvent(ctx context.Context, event *events.Event) error {
-	if err := h.searchRepo.DeleteFromIndex(ctx, event.Domain); err != nil {
+func (h *EventHandler) handleDeleteEvent(ctx context.Context, event *events.Event) error {
+	var payload events.IndexStarterPayload
+
+	if err := event.UnmarshalData(&payload); err != nil {
+		log.Printf("Failed to unmarshal leader assignment event: %v", err)
+		return err
+	}
+
+	if err := h.searchRepo.DeleteFromIndex(ctx, payload.Domain); err != nil {
 		return fmt.Errorf("failed to delete starter from Elasticsearch: %w", err)
 	}
 

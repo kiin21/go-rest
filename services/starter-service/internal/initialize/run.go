@@ -4,16 +4,19 @@ import (
 	"log"
 	"strings"
 
+	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/gin-gonic/gin"
+	"github.com/kiin21/go-rest/pkg/httputil"
 	"github.com/kiin21/go-rest/services/starter-service/internal/config"
 	initDB "github.com/kiin21/go-rest/services/starter-service/internal/initialize/db"
 	initES "github.com/kiin21/go-rest/services/starter-service/internal/initialize/elasticsearch"
 	initBroker "github.com/kiin21/go-rest/services/starter-service/internal/initialize/messagebroker"
-
-	"github.com/elastic/go-elasticsearch/v8"
-	"github.com/gin-gonic/gin"
+	initStarter "github.com/kiin21/go-rest/services/starter-service/internal/initialize/starter"
+	domainmessaging "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/messaging"
+	persistentMySQL "github.com/kiin21/go-rest/services/starter-service/internal/starter/infrastructure/persistence/repository/mysql"
 )
 
-func Run() (*gin.Engine, string) {
+func Run() (*gin.Engine, string, domainmessaging.NotificationProducer, domainmessaging.StarterConsumer) {
 	// 1> Read config -> environment variables
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -43,22 +46,43 @@ func Run() (*gin.Engine, string) {
 		}
 	}
 
-	// 4> Initialize Kafka brokers
-	notificationPublisher := initBroker.InitNotificationPublisher(
-		cfg.KafkaBrokers,
-		cfg.KafkaTopicNotifications,
+	// 4> Initialize Kafka notification producer
+	notificationProducer := initBroker.InitProducer(cfg)
+
+	// 5> Prepare shared dependencies
+	requestURLResolver := httputil.NewRequestURLResolver()
+	starterRepo := persistentMySQL.NewStarterRepository(db)
+	businessUnitRepo := persistentMySQL.NewBusinessUnitRepository(db)
+	departmentRepo := persistentMySQL.NewDepartmentRepository(db)
+
+	orgHandler := initStarter.InitOrganization(
+		requestURLResolver,
+		starterRepo,
+		departmentRepo,
+		businessUnitRepo,
+		notificationProducer,
 	)
 
-	// 5> Initialize router
-	r := InitRouter(
-		db,
+	starterHandler, searchRepo := initStarter.InitStarter(
 		esClient,
-		cfg.LogLevel,
-		notificationPublisher,
-		cfg.KafkaBrokers,
-		cfg.KafkaTopicSyncEvents,
-		cfg.KafkaConsumerGroup,
+		starterRepo,
+		departmentRepo,
+		businessUnitRepo,
+		requestURLResolver,
+		notificationProducer,
 	)
 
-	return r, cfg.ServerPort
+	eventHandler := initBroker.InitEventHandler(searchRepo)
+
+	consumer := initBroker.InitGroupConsumer(cfg, eventHandler)
+
+	// 6> Initialize router
+	r := InitRouter(
+		cfg.LogLevel,
+		requestURLResolver,
+		orgHandler,
+		starterHandler,
+	)
+
+	return r, cfg.ServerPort, notificationProducer, consumer
 }

@@ -24,15 +24,15 @@ func NewNotiHandler(
 	}
 }
 
-// ListNotifications godoc
+// GetList godoc
 // @Summary List notifications
-// @Description Retrieve notifications with pagination and sorting options.
+// @Description Retrieve notifications with pagination and sorting options
 // @Tags Notifications
 // @Produce json
-// @Param sort_by query string false "Sort notifications by field" Enums(from,to,type,timestamp)
-// @Param sort_order query string false "Sort order direction" Enums(asc,desc)
+// @Param sort_by query string false "Sort field" Enums(from,to,type,timestamp) default(timestamp)
+// @Param sort_order query string false "Sort order" Enums(asc,desc) default(desc)
 // @Param page query int false "Page number" minimum(1) default(1)
-// @Param limit query int false "Items per page" minimum(1) maximum(100) default(20)
+// @Param limit query int false "Page size" minimum(1) maximum(100) default(20)
 // @Success 200 {object} dto.ListNotiListAPIResponse
 // @Failure 400 {object} dto.GenericAPIResponse
 // @Failure 500 {object} dto.GenericAPIResponse

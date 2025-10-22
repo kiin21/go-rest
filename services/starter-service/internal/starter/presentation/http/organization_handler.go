@@ -11,6 +11,16 @@ import (
 	"github.com/kiin21/go-rest/services/starter-service/internal/starter/application/service"
 	businessunitdto "github.com/kiin21/go-rest/services/starter-service/internal/starter/presentation/http/dto/businessunit"
 	departmentdto "github.com/kiin21/go-rest/services/starter-service/internal/starter/presentation/http/dto/department"
+	shareddto "github.com/kiin21/go-rest/services/starter-service/internal/starter/presentation/http/dto/shared"
+)
+
+var (
+	_ shareddto.GenericAPIResponse
+	_ departmentdto.DepartmentListAPIResponse
+	_ departmentdto.DepartmentDetailAPIResponse
+	_ departmentdto.DepartmentDeleteAPIResponse
+	_ businessunitdto.BusinessUnitListAPIResponse
+	_ businessunitdto.BusinessUnitDetailAPIResponse
 )
 
 type OrganizationHandler struct {
@@ -30,14 +40,15 @@ func NewOrganizationHandler(
 
 // ListDepartments godoc
 // @Summary List departments
-// @Description Retrieve departments with optional filters
+// @Description Retrieve departments with optional business unit filter and pagination
 // @Tags Departments
 // @Produce json
-// @Param business_unit_id query int false "Filter by business unit"
-// @Param page query int false "Page number"
-// @Param limit query int false "Items per page"
-// @Success 200 {object} httputil.APIResponse
-// @Failure 400 {object} httputil.APIResponse
+// @Param business_unit_id query int false "Filter by business unit ID" minimum(1)
+// @Param page query int false "Page number" minimum(1) default(1)
+// @Param limit query int false "Page size" minimum(1) maximum(100) default(10)
+// @Success 200 {object} departmentdto.DepartmentListAPIResponse
+// @Failure 400 {object} shareddto.GenericAPIResponse
+// @Failure 500 {object} shareddto.GenericAPIResponse
 // @Router /departments [get]
 func (h *OrganizationHandler) ListDepartments(ctx *gin.Context) {
 	httputil.Wrap(h.listDepartments)(ctx)
@@ -77,10 +88,11 @@ func (h *OrganizationHandler) listDepartments(ctx *gin.Context) (res interface{}
 // @Description Retrieve a department with nested details by ID
 // @Tags Departments
 // @Produce json
-// @Param id path int true "Department ID"
-// @Success 200 {object} httputil.APIResponse
-// @Failure 400 {object} httputil.APIResponse
-// @Failure 404 {object} httputil.APIResponse
+// @Param id path int true "Department ID" minimum(1)
+// @Success 200 {object} departmentdto.DepartmentDetailAPIResponse
+// @Failure 400 {object} shareddto.GenericAPIResponse
+// @Failure 404 {object} shareddto.GenericAPIResponse
+// @Failure 500 {object} shareddto.GenericAPIResponse
 // @Router /departments/{id} [get]
 func (h *OrganizationHandler) GetDepartmentDetail(ctx *gin.Context) {
 	httputil.Wrap(h.getDepartmentDetail)(ctx)
@@ -109,10 +121,11 @@ func (h *OrganizationHandler) getDepartmentDetail(ctx *gin.Context) (res interfa
 // @Description Retrieve business units with pagination
 // @Tags Business Units
 // @Produce json
-// @Param page query int false "Page number"
-// @Param limit query int false "Items per page"
-// @Success 200 {object} httputil.APIResponse
-// @Failure 400 {object} httputil.APIResponse
+// @Param page query int false "Page number" minimum(1) default(1)
+// @Param limit query int false "Page size" minimum(1) maximum(100) default(10)
+// @Success 200 {object} businessunitdto.BusinessUnitListAPIResponse
+// @Failure 400 {object} shareddto.GenericAPIResponse
+// @Failure 500 {object} shareddto.GenericAPIResponse
 // @Router /business-units [get]
 func (h *OrganizationHandler) ListBusinessUnits(ctx *gin.Context) {
 	httputil.Wrap(h.listBusinessUnits)(ctx)
@@ -152,10 +165,11 @@ func (h *OrganizationHandler) listBusinessUnits(ctx *gin.Context) (res interface
 // @Description Retrieve a business unit with nested details by ID
 // @Tags Business Units
 // @Produce json
-// @Param id path int true "Business unit ID"
-// @Success 200 {object} httputil.APIResponse
-// @Failure 400 {object} httputil.APIResponse
-// @Failure 404 {object} httputil.APIResponse
+// @Param id path int true "Business unit ID" minimum(1)
+// @Success 200 {object} businessunitdto.BusinessUnitDetailAPIResponse
+// @Failure 400 {object} shareddto.GenericAPIResponse
+// @Failure 404 {object} shareddto.GenericAPIResponse
+// @Failure 500 {object} shareddto.GenericAPIResponse
 // @Router /business-units/{id} [get]
 func (h *OrganizationHandler) GetBusinessUnit(ctx *gin.Context) {
 	httputil.Wrap(h.getBusinessUnit)(ctx)
@@ -184,9 +198,9 @@ func (h *OrganizationHandler) getBusinessUnit(ctx *gin.Context) (res interface{}
 // @Accept json
 // @Produce json
 // @Param request body departmentdto.CreateDepartmentRequest true "Department payload"
-// @Success 201 {object} httputil.APIResponse
-// @Failure 400 {object} httputil.APIResponse
-// @Failure 500 {object} httputil.APIResponse
+// @Success 200 {object} departmentdto.DepartmentDetailAPIResponse
+// @Failure 400 {object} shareddto.GenericAPIResponse
+// @Failure 500 {object} shareddto.GenericAPIResponse
 // @Router /departments [post]
 func (h *OrganizationHandler) CreateDepartment(ctx *gin.Context) {
 	httputil.Wrap(h.createDepartment)(ctx)
@@ -217,15 +231,16 @@ func (h *OrganizationHandler) createDepartment(ctx *gin.Context) (res interface{
 
 // UpdateDepartment godoc
 // @Summary Update department
-// @Description Update department information
+// @Description Update department information by ID
 // @Tags Departments
 // @Accept json
 // @Produce json
-// @Param id path int true "Department ID"
+// @Param id path int true "Department ID" minimum(1)
 // @Param request body departmentdto.UpdateDepartmentRequest true "Update payload"
-// @Success 200 {object} httputil.APIResponse
-// @Failure 400 {object} httputil.APIResponse
-// @Failure 404 {object} httputil.APIResponse
+// @Success 200 {object} departmentdto.DepartmentDetailAPIResponse
+// @Failure 400 {object} shareddto.GenericAPIResponse
+// @Failure 404 {object} shareddto.GenericAPIResponse
+// @Failure 500 {object} shareddto.GenericAPIResponse
 // @Router /departments/{id} [patch]
 func (h *OrganizationHandler) UpdateDepartment(ctx *gin.Context) {
 	httputil.Wrap(h.updateDepartment)(ctx)
@@ -267,11 +282,12 @@ func (h *OrganizationHandler) updateDepartment(ctx *gin.Context) (res interface{
 // @Tags Departments
 // @Accept json
 // @Produce json
-// @Param id path int true "Department ID"
+// @Param id path int true "Department ID" minimum(1)
 // @Param request body departmentdto.AssignLeaderRequest true "Leader assignment payload"
-// @Success 200 {object} httputil.APIResponse
-// @Failure 400 {object} httputil.APIResponse
-// @Failure 404 {object} httputil.APIResponse
+// @Success 200 {object} departmentdto.DepartmentDetailAPIResponse
+// @Failure 400 {object} shareddto.GenericAPIResponse
+// @Failure 404 {object} shareddto.GenericAPIResponse
+// @Failure 500 {object} shareddto.GenericAPIResponse
 // @Router /departments/{id}/leader [patch]
 func (h *OrganizationHandler) AssignLeaderToDepartment(ctx *gin.Context) {
 	httputil.Wrap(h.assignLeaderToDepartment)(ctx)
@@ -329,10 +345,11 @@ func (h *OrganizationHandler) assignLeaderToDepartment(ctx *gin.Context) (res in
 // @Description Delete a department by ID
 // @Tags Departments
 // @Produce json
-// @Param id path int true "Department ID"
-// @Success 200 {object} httputil.APIResponse
-// @Failure 400 {object} httputil.APIResponse
-// @Failure 404 {object} httputil.APIResponse
+// @Param id path int true "Department ID" minimum(1)
+// @Success 200 {object} departmentdto.DepartmentDeleteAPIResponse
+// @Failure 400 {object} shareddto.GenericAPIResponse
+// @Failure 404 {object} shareddto.GenericAPIResponse
+// @Failure 500 {object} shareddto.GenericAPIResponse
 // @Router /departments/{id} [delete]
 func (h *OrganizationHandler) DeleteDepartment(ctx *gin.Context) {
 	httputil.Wrap(h.deleteDepartment)(ctx)

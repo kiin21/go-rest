@@ -5,12 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
-	"github.com/kiin21/go-rest/pkg/httputil"
+	starterquery "github.com/kiin21/go-rest/services/starter-service/internal/starter/application/dto/starter/query"
 	"github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/model"
 	repo "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/repository"
 )
@@ -23,14 +24,8 @@ func NewElasticsearchStarterRepository(client *elasticsearch.Client) repo.Starte
 	return &ElasticsearchStarterRepository{client: client}
 }
 
-func (r *ElasticsearchStarterRepository) Search(
-	ctx context.Context,
-	query string,
-	filter model.StarterListFilter,
-	pg httputil.ReqPagination,
-) ([]*model.Starter, int64, error) {
-
-	esQuery := r.buildSearchQuery(query, filter)
+func (r *ElasticsearchStarterRepository) Search(ctx context.Context, listStarterQuery starterquery.ListStartersQuery) ([]*model.Starter, int64, error) {
+	esQuery := r.buildSearchQuery(listStarterQuery)
 
 	// Execute search
 	var buf bytes.Buffer
@@ -39,7 +34,7 @@ func (r *ElasticsearchStarterRepository) Search(
 	}
 
 	// Pagination
-	from := (pg.Page - 1) * pg.Limit
+	from := (listStarterQuery.Pagination.Page - 1) * listStarterQuery.Pagination.Limit
 
 	res, err := r.client.Search(
 		r.client.Search.WithContext(ctx),
@@ -47,15 +42,18 @@ func (r *ElasticsearchStarterRepository) Search(
 		r.client.Search.WithBody(&buf),
 		r.client.Search.WithTrackTotalHits(true),
 		r.client.Search.WithFrom(from),
-		r.client.Search.WithSize(pg.Limit),
+		r.client.Search.WithSize(listStarterQuery.Pagination.Limit),
 	)
-	if err != nil {
-		defer res.Body.Close()
-	}
 
 	if err != nil {
 		return nil, 0, fmt.Errorf("error executing search: %w", err)
 	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(res.Body)
 
 	if res.IsError() {
 		return nil, 0, fmt.Errorf("elasticsearch error: %s", res.String())
@@ -101,14 +99,19 @@ func (r *ElasticsearchStarterRepository) IndexStarter(ctx context.Context, start
 		Index:      starterIndexName,
 		DocumentID: fmt.Sprintf("%d", starter.ID()),
 		Body:       bytes.NewReader(body),
-		Refresh:    "true", // Make immediately searchable (use "false" for production with high volume)
+		Refresh:    "true",
 	}
 
 	res, err := req.Do(ctx, r.client)
 	if err != nil {
 		return fmt.Errorf("error indexing document: %w", err)
 	}
-	defer res.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(res.Body)
 
 	if res.IsError() {
 		return fmt.Errorf("error indexing document: %s", res.String())
@@ -142,7 +145,12 @@ func (r *ElasticsearchStarterRepository) DeleteFromIndex(ctx context.Context, do
 	if err != nil {
 		return fmt.Errorf("error deleting document: %w", err)
 	}
-	defer res.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(res.Body)
 
 	if res.IsError() {
 		return fmt.Errorf("error deleting document: %s", res.String())
@@ -191,7 +199,12 @@ func (r *ElasticsearchStarterRepository) BulkIndex(ctx context.Context, starters
 	if err != nil {
 		return fmt.Errorf("error executing bulk: %w", err)
 	}
-	defer res.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			// TODO: Handle error like this (search for "if err != nil")
+		}
+	}(res.Body)
 
 	if res.IsError() {
 		return fmt.Errorf("error in bulk response: %s", res.String())
@@ -201,60 +214,6 @@ func (r *ElasticsearchStarterRepository) BulkIndex(ctx context.Context, starters
 }
 
 // Helper methods
-
-func (r *ElasticsearchStarterRepository) buildSearchQuery(
-	query string, filter model.StarterListFilter,
-) map[string]interface{} {
-	var must []interface{}
-
-	if query != "" {
-		must = append(must, map[string]interface{}{
-			"multi_match": map[string]interface{}{
-				"query": query,
-				"fields": []string{
-					"domain^3",    // Boost domain matches (highest priority)
-					"job_title^2", // Boost job title matches
-					"email",
-					"mobile",
-					"full_text",
-				},
-				"type":           "best_fields",
-				"fuzziness":      "AUTO", // Handle typos
-				"prefix_length":  2,
-				"max_expansions": 50,
-			},
-		})
-	}
-
-	// Apply filters
-	if filter.DepartmentID != nil {
-		must = append(must, map[string]interface{}{
-			"term": map[string]interface{}{
-				"department_id": *filter.DepartmentID,
-			},
-		})
-	}
-
-	if filter.LineManagerID != nil {
-		must = append(must, map[string]interface{}{
-			"term": map[string]interface{}{
-				"line_manager_id": *filter.LineManagerID,
-			},
-		})
-	}
-
-	// Build final query
-	esQuery := map[string]interface{}{
-		"query": map[string]interface{}{
-			"bool": map[string]interface{}{
-				"must": must,
-			},
-		},
-		"sort": buildSearchSortClause(filter.SortBy, filter.SortOrder),
-	}
-
-	return esQuery
-}
 
 // toDocument converts domain Starter to Elasticsearch document
 func (r *ElasticsearchStarterRepository) toDocument(starter *model.Starter) *StarterDocument {
@@ -336,56 +295,119 @@ func (r *ElasticsearchStarterRepository) toDomain(source map[string]interface{})
 	)
 }
 
-func buildSearchSortClause(sortBy, sortOrder string) []interface{} {
-	field := mapStarterSearchSortField(sortBy)
-	order := strings.ToLower(sortOrder)
-	if order != "desc" {
-		order = "asc"
-	}
+func (r *ElasticsearchStarterRepository) buildSearchQuery(query starterquery.ListStartersQuery) map[string]interface{} {
+	var must []interface{}
 
-	if field == "" {
-		return []interface{}{
-			map[string]interface{}{
-				"_score": map[string]interface{}{
-					"order": "desc",
+	// Handle search by specific field or multi-field
+	if query.Keyword != "" {
+		if query.SearchBy != "" {
+			// Search by specific field
+			fieldName := r.mapSearchByToFieldName(query.SearchBy)
+			must = append(must, map[string]interface{}{
+				"match": map[string]interface{}{
+					fieldName: map[string]interface{}{
+						"query":     query.Keyword,
+						"fuzziness": "AUTO",
+						"operator":  "and",
+					},
 				},
-			},
-			map[string]interface{}{
-				"created_at": map[string]interface{}{
-					"order": "desc",
+			})
+		} else {
+			// Multi-field search when SearchBy is empty
+			must = append(must, map[string]interface{}{
+				"multi_match": map[string]interface{}{
+					"query": query.Keyword,
+					"fields": []string{
+						"name^3",      // Boost name matches (highest priority)
+						"domain^3",    // Boost domain matches
+						"job_title^2", // Boost job title matches
+						"email",
+						"mobile",
+						"full_text",
+					},
+					"type":           "best_fields",
+					"fuzziness":      "AUTO",
+					"prefix_length":  2,
+					"max_expansions": 50,
 				},
-			},
+			})
 		}
 	}
 
-	sortClause := []interface{}{
+	// Build query structure
+	boolQuery := map[string]interface{}{}
+	if len(must) > 0 {
+		boolQuery["must"] = must
+	} else {
+		// Match all if no search criteria
+		return map[string]interface{}{
+			"query": map[string]interface{}{
+				"match_all": map[string]interface{}{},
+			},
+			"sort": r.buildSortClause(query.SortBy, query.SortOrder),
+		}
+	}
+
+	esQuery := map[string]interface{}{
+		"query": map[string]interface{}{
+			"bool": boolQuery,
+		},
+		"sort": r.buildSortClause(query.SortBy, query.SortOrder),
+	}
+
+	return esQuery
+}
+
+// mapSearchByToFieldName maps the SearchBy parameter to Elasticsearch field name
+func (r *ElasticsearchStarterRepository) mapSearchByToFieldName(searchBy string) string {
+	switch searchBy {
+	case "fullname":
+		return "name"
+	case "domain":
+		return "domain"
+	case "dept_name":
+		return "department_name" // Assuming you have this field in ES
+	case "bu_name":
+		return "business_unit_name" // Assuming you have this field in ES
+	default:
+		return "full_text" // Fallback to full_text search
+	}
+}
+
+// buildSortClause builds the sort clause for Elasticsearch
+func (r *ElasticsearchStarterRepository) buildSortClause(sortBy, sortOrder string) []interface{} {
+	if sortBy == "" {
+		sortBy = "_score" // Default sort by relevance
+	}
+
+	if sortOrder == "" {
+		sortOrder = "desc"
+	}
+
+	// Map domain sort fields to ES fields
+	fieldName := r.mapSortFieldToESField(sortBy)
+
+	return []interface{}{
 		map[string]interface{}{
-			field: map[string]interface{}{
-				"order": order,
+			fieldName: map[string]interface{}{
+				"order": sortOrder,
 			},
 		},
 	}
-
-	if field != "_score" {
-		sortClause = append(sortClause, map[string]interface{}{
-			"_score": map[string]interface{}{
-				"order": "desc",
-			},
-		})
-	}
-
-	return sortClause
 }
 
-func mapStarterSearchSortField(sortBy string) string {
-	switch strings.ToLower(sortBy) {
-	case "id":
-		return "id"
+// mapSortFieldToESField maps domain sort fields to Elasticsearch fields
+func (r *ElasticsearchStarterRepository) mapSortFieldToESField(sortBy string) string {
+	switch sortBy {
+	case "name", "fullname":
+		return "name.keyword" // Use keyword field for sorting
 	case "domain":
 		return "domain.keyword"
 	case "created_at":
 		return "created_at"
+	case "updated_at":
+		return "updated_at"
 	default:
-		return ""
+		return "_score"
 	}
 }
