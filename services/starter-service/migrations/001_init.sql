@@ -171,7 +171,7 @@ UPDATE name =
 VALUES (name);
 
 INSERT INTO starters (id, domain, name, email, mobile, work_phone, job_title, department_id, line_manager_id)
-VALUES (1, 'minhlh', 'Le Hoang Minh', 'minhlh@vng.com.vn', '(+84) 0913875329', '0913875329', 'Founder, Chairman of VNG',
+VALUES (1, 'minhlh', 'Le Hong Minh', 'minhlh@vng.com.vn', '(+84) 0913875329', '0913875329', 'Founder, Chairman of VNG',
         NULL, NULL),
        (2, 'kelly', 'Kelly Le', 'kelly@vng.com.vn', '(+84) 0919392288', '0919392288', 'Chief Executive Officer', NULL,
         NULL),
@@ -180,15 +180,15 @@ VALUES (1, 'minhlh', 'Le Hoang Minh', 'minhlh@vng.com.vn', '(+84) 0913875329', '
         'Vice President of VNG, CEO of Digital Business', NULL, NULL),
        (5, 'khaivq', 'Vu Quang Khai', 'khaivq@vng.com.vn', '(+84) 0904101242', '0904101242 (1001)',
         'Co-founder, Executive Vice President of VNG', NULL, NULL),
-       (6, 'hawkinsp', 'Pham Hawkins', 'hawkinsp@vng.com.vn', '(+84) 0937972323', '0937972323',
+       (6, 'hawkinsp', 'Hawkins Pham', 'hawkinsp@vng.com.vn', '(+84) 0937972323', '0937972323',
         'Director, Head of Publishing Platform', NULL, NULL),
        (7, 'vietph', 'Pham Hoang Viet', 'vietph@vng.com.vn', '(+84) 0909987790', '0909987790',
         'Group Manager, Head of Engineering', NULL, NULL),
-       (8, 'locth2', 'Tran Hoang Loc', 'locth2@vng.com.vn', '(+84) 0934482999', '0934482999 (35500)',
+       (8, 'locth2', 'Tran Huu Loc', 'locth2@vng.com.vn', '(+84) 0934482999', '0934482999 (35500)',
         'Technical Manager', NULL, NULL),
-       (9, 'duydh2', 'Dang Huu Duy', 'duydh2@vng.com.vn', '(+84) 0904157432', '0904157432', 'Lead Software Engineer',
+       (9, 'duydh2', 'Dang Hoang Duy', 'duydh2@vng.com.vn', '(+84) 0904157432', '0904157432', 'Lead Software Engineer',
         NULL, NULL),
-       (10, 'khoapda', 'Pham Dinh Anh Khoa', 'khoapda@vng.com.vn', '(+84) 0359754697', '0359754697', 'Software Intern',
+       (10, 'khoapda', 'Pham Dao Anh Khoa', 'khoapda@vng.com.vn', '(+84) 0359754697', '0359754697', 'Software Intern',
         NULL, NULL),
        (11, 'duyct', 'Cao Tien Duy', 'duyct@vng.com.vn', '(+84) 0908608731', '0908608731', 'Senior Data Engineer', NULL,
         NULL),

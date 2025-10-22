@@ -72,7 +72,7 @@ func (h *OrganizationHandler) listDepartments(ctx *gin.Context) (res interface{}
 
 	result, err := h.orgService.GetAllDepartments(ctx, query)
 	if err != nil {
-		return nil, mapServiceError(err, "", "Failed to list departments")
+		return nil, err
 	}
 
 	responseData := departmentdto.FromDomainsWithDetails(result.Data)
@@ -110,7 +110,7 @@ func (h *OrganizationHandler) getDepartmentDetail(ctx *gin.Context) (res interfa
 
 	result, err := h.orgService.GetOneDepartment(ctx, *query)
 	if err != nil {
-		return nil, mapServiceError(err, "Department not found", "Failed to fetch department")
+		return nil, err
 	}
 
 	return departmentdto.FromDomainWithDetails(result), nil
@@ -148,7 +148,7 @@ func (h *OrganizationHandler) listBusinessUnits(ctx *gin.Context) (res interface
 
 	result, err := h.orgService.ListBusinessUnitsWithDetails(ctx, query)
 	if err != nil {
-		return nil, mapServiceError(err, "", "Failed to list business units")
+		return nil, err
 	}
 
 	responseData := businessunitdto.FromBusinessUnitsWithDetails(result.Data)
@@ -185,7 +185,7 @@ func (h *OrganizationHandler) getBusinessUnit(ctx *gin.Context) (res interface{}
 
 	unit, err := h.orgService.GetBusinessUnitWithDetails(ctx, uriReq.ID)
 	if err != nil {
-		return nil, mapServiceError(err, "Business unit not found", "Failed to fetch business unit")
+		return nil, err
 	}
 
 	return businessunitdto.FromBusinessUnitWithDetails(unit), nil
@@ -223,7 +223,7 @@ func (h *OrganizationHandler) createDepartment(ctx *gin.Context) (res interface{
 
 	result, err := h.orgService.CreateDepartment(ctx, cmd)
 	if err != nil {
-		return nil, mapServiceError(err, "", "Failed to create department")
+		return nil, err
 	}
 
 	return departmentdto.FromDomainWithDetails(result), nil
@@ -270,7 +270,7 @@ func (h *OrganizationHandler) updateDepartment(ctx *gin.Context) (res interface{
 
 	result, err := h.orgService.UpdateDepartment(ctx, cmd)
 	if err != nil {
-		return nil, mapServiceError(err, "Department not found", "Failed to update department")
+		return nil, err
 	}
 
 	return departmentdto.FromDomainWithDetails(result), nil
@@ -334,7 +334,7 @@ func (h *OrganizationHandler) assignLeaderToDepartment(ctx *gin.Context) (res in
 
 	result, err := h.orgService.AssignLeader(ctx, cmd)
 	if err != nil {
-		return nil, mapServiceError(err, "Department or leader not found", "Failed to assign leader")
+		return nil, err
 	}
 
 	return departmentdto.FromDomainWithDetails(result), nil
@@ -367,7 +367,7 @@ func (h *OrganizationHandler) deleteDepartment(ctx *gin.Context) (res interface{
 
 	err = h.orgService.DeleteDepartment(ctx, *query)
 	if err != nil {
-		return nil, mapServiceError(err, "Fail to delete department", "Department not found or failed to delete root department")
+		return nil, err
 	}
 
 	return gin.H{

@@ -82,12 +82,12 @@ func (sh *StarterHandler) listStarters(ctx *gin.Context) (res interface{}, err e
 
 	rawResult, err := sh.service.ListStarters(ctx, query)
 	if err != nil {
-		return nil, mapServiceError(err, "", "Failed to list starters")
+		return nil, err
 	}
 
 	enrichedDomain, err := sh.service.EnrichStarters(ctx, rawResult.Data)
 	if err != nil {
-		return nil, mapServiceError(err, "", "Failed to enrich starters")
+		return nil, err
 	}
 
 	enrichedDTO := starterdto.FromDomainEnrichment(enrichedDomain)
@@ -141,7 +141,7 @@ func (sh *StarterHandler) createStarter(ctx *gin.Context) (res interface{}, err 
 		case errors.Is(err, sharedDomain.ErrValidation), errors.Is(err, sharedDomain.ErrInvalidInput):
 			return nil, httputil.NewAPIError(http.StatusBadRequest, "Validation failed", err.Error())
 		default:
-			return nil, mapServiceError(err, "", "Failed to create starter")
+			return nil, err
 		}
 	}
 
@@ -178,12 +178,12 @@ func (sh *StarterHandler) find(ctx *gin.Context) (res interface{}, err error) {
 
 	starter, err := sh.service.GetStarterByDomain(ctx, req.Domain)
 	if err != nil {
-		return nil, mapServiceError(err, "Starter not found", "Failed to fetch starter")
+		return nil, err
 	}
 
 	enrichedDomain, err := sh.service.EnrichStarters(ctx, []*model.Starter{starter})
 	if err != nil {
-		return nil, mapServiceError(err, "", "Failed to enrich starter")
+		return nil, err
 	}
 
 	enrichedDTO := starterdto.FromDomainEnrichment(enrichedDomain)
@@ -237,13 +237,13 @@ func (sh *StarterHandler) updateStarter(ctx *gin.Context) (res interface{}, err 
 		case errors.Is(err, sharedDomain.ErrNotFound):
 			return nil, httputil.NewAPIError(http.StatusNotFound, "Starter not found", err.Error())
 		default:
-			return nil, mapServiceError(err, "", "Failed to update starter")
+			return nil, err
 		}
 	}
 
 	enrichedDomain, err := sh.service.EnrichStarters(ctx, []*model.Starter{starter})
 	if err != nil {
-		return nil, mapServiceError(err, "", "Failed to enrich starter")
+		return nil, err
 	}
 
 	enrichedDTO := starterdto.FromDomainEnrichment(enrichedDomain)
@@ -273,7 +273,7 @@ func (sh *StarterHandler) softDeleteStarter(ctx *gin.Context) (res interface{}, 
 	}
 
 	if err := sh.service.SoftDeleteStarter(ctx, req.Domain); err != nil {
-		return nil, mapServiceError(err, "Starter not found", "Failed to delete starter")
+		return nil, err
 	}
 
 	return gin.H{

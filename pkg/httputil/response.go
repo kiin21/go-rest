@@ -38,6 +38,8 @@ func Wrap(handler HandlerFunc) func(c *gin.Context) {
 			var apiErr *APIError
 			if errors.As(err, &apiErr) {
 				ErrorResponse(ctx, apiErr.StatusCode, apiErr.Message, apiErr.Err)
+			} else {
+				ErrorResponse(ctx, 500, "Internal server error", err.Error())
 			}
 			return
 		}

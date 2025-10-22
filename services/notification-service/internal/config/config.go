@@ -29,7 +29,6 @@ func LoadConfig() (config Config, err error) {
 
 	err = viper.ReadInConfig()
 	if err != nil {
-		// If the config file is not found, return a specific error
 		var configFileNotFoundError viper.ConfigFileNotFoundError
 		if errors.As(err, &configFileNotFoundError) {
 			return config, fmt.Errorf("config file not found: %w", err)
