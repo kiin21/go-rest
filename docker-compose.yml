@@ -8,15 +8,6 @@ services:
     restart: always
     ports:
       - "8080:3000"
-#    environment:
-#      - DB_URI=gouser:gopassword@tcp(vng-mysql:3306)/intern_app?charset=utf8mb4&parseTime=True&loc=Local
-#      - SERVER_PORT=8080
-#      - LOG_LEVEL=debug
-#      - ELASTICSEARCH_ADDRESSES=http://vng-elasticsearch:9200
-#      - KAFKA_BROKERS=vng-messagequeue:29092
-#      - KAFKA_TOPIC_SYNC_EVENTS=starter-sync-events
-#      - KAFKA_TOPIC_NOTIFICATIONS=starter-notification-events
-#      - KAFKA_CONSUMER_GROUP=starter-sync-consumer
     networks:
       - vng-network
 
@@ -29,14 +20,6 @@ services:
     restart: always
     ports:
       - "8081:8081"
-#    environment:
-#      - SERVER_PORT=8081
-#      - LOG_LEVEL=debug
-#      - KAFKA_BROKERS=vng-messagequeue:29092
-#      - KAFKA_TOPIC_NOTIFICATIONS=starter-notification-events
-#      - KAFKA_CONSUMER_GROUP=notification-service-consumer
-#      - MONGODB_URI=mongodb://notifications_user:notifications_pass@vng-mongodb:27017/?authSource=admin
-#      - MONGODB_DATABASE=notifications
     networks:
       - vng-network
 

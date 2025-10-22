@@ -18,23 +18,6 @@ func InitRouter(
 	orgHandler *orgHttp.OrganizationHandler,
 	starterHandler *orgHttp.StarterHandler,
 ) *gin.Engine {
-	router := newGinEngine(logLevel)
-
-	router.GET("/health", func(ctx *gin.Context) {
-		ctx.JSON(http.StatusOK, gin.H{"status": "healthy"})
-	})
-
-	registerSwaggerRoutes(router, requestURLResolver)
-
-	v1 := router.Group("/api/v1")
-
-	orgHttp.RegisterOrganizationRoutes(v1, orgHandler)
-	orgHttp.RegisterStarterRoutes(v1, starterHandler)
-
-	return router
-}
-
-func newGinEngine(logLevel string) *gin.Engine {
 	var router *gin.Engine
 	if logLevel == "debug" {
 		gin.SetMode(gin.DebugMode)
@@ -44,12 +27,15 @@ func newGinEngine(logLevel string) *gin.Engine {
 		gin.SetMode(gin.ReleaseMode)
 		router = gin.New()
 	}
-	router.Use(middleware.CORS)
-	return router
-}
 
-func registerSwaggerRoutes(router *gin.Engine, requestURLResolver httputil.RequestURLResolver) {
 	swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler)
+
+	router.Use(middleware.CORS)
+
+	router.GET("/health", func(ctx *gin.Context) {
+		ctx.JSON(http.StatusOK, gin.H{"status": "healthy"})
+	})
+
 	router.GET("/swagger/*any", func(ctx *gin.Context) {
 		docs.SwaggerInfo.Schemes = []string{requestURLResolver.Scheme(ctx)}
 		if host := requestURLResolver.Host(ctx); host != "" {
@@ -57,4 +43,11 @@ func registerSwaggerRoutes(router *gin.Engine, requestURLResolver httputil.Reque
 		}
 		swaggerHandler(ctx)
 	})
+
+	v1 := router.Group("/api/v1")
+
+	orgHttp.RegisterOrganizationRoutes(v1, orgHandler)
+	orgHttp.RegisterStarterRoutes(v1, starterHandler)
+
+	return router
 }

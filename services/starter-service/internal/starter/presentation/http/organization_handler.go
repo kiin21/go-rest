@@ -19,8 +19,6 @@ var (
 	_ departmentdto.DepartmentListAPIResponse
 	_ departmentdto.DepartmentDetailAPIResponse
 	_ departmentdto.DepartmentDeleteAPIResponse
-	_ businessunitdto.BusinessUnitListAPIResponse
-	_ businessunitdto.BusinessUnitDetailAPIResponse
 )
 
 type OrganizationHandler struct {
@@ -123,7 +121,6 @@ func (h *OrganizationHandler) getDepartmentDetail(ctx *gin.Context) (res interfa
 // @Produce json
 // @Param page query int false "Page number" minimum(1) default(1)
 // @Param limit query int false "Page size" minimum(1) maximum(100) default(10)
-// @Success 200 {object} businessunitdto.BusinessUnitListAPIResponse
 // @Failure 400 {object} shareddto.GenericAPIResponse
 // @Failure 500 {object} shareddto.GenericAPIResponse
 // @Router /business-units [get]

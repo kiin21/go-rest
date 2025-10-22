@@ -6,13 +6,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8"
 )
 
-type Config struct {
-	Addresses []string
-	Username  string
-	Password  string
-}
-
-func InitESClient(cfg Config) (*elasticsearch.Client, error) {
+func InitESClient(cfg elasticsearch.Config) (*elasticsearch.Client, error) {
 	esCfg := elasticsearch.Config{
 		Addresses: cfg.Addresses,
 	}

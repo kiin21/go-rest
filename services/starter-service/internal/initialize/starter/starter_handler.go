@@ -14,14 +14,7 @@ import (
 	orgHttp "github.com/kiin21/go-rest/services/starter-service/internal/starter/presentation/http"
 )
 
-func InitStarter(
-	esClient *elasticsearch.Client,
-	starterRepo orgRepository.StarterRepository,
-	departmentRepo orgRepository.DepartmentRepository,
-	businessUnitRepo orgRepository.BusinessUnitRepository,
-	requestURLResolver httputil.RequestURLResolver,
-	notifProducer messaging.NotificationProducer,
-) (*orgHttp.StarterHandler, orgRepository.StarterSearchRepository) {
+func InitStarter(requestURLResolver httputil.RequestURLResolver, starterRepo orgRepository.StarterRepository, departmentRepo orgRepository.DepartmentRepository, businessUnitRepo orgRepository.BusinessUnitRepository, esClient *elasticsearch.Client, notifProducer messaging.NotificationProducer) (*orgHttp.StarterHandler, orgRepository.StarterSearchRepository) {
 	// Initialize Elasticsearch repository
 	var starterSearchService *orgApp.StarterSearchService
 	var searchRepository orgRepository.StarterSearchRepository

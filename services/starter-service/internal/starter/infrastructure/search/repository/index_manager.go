@@ -6,17 +6,37 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 )
 
+const starterIndexName = "starters"
+
 type IndexManager struct {
-	client *elasticsearch.Client
+	client      *elasticsearch.Client
+	mappingData []byte
 }
 
-func NewIndexManager(client *elasticsearch.Client) *IndexManager {
-	return &IndexManager{client: client}
+func NewIndexManager(client *elasticsearch.Client) (*IndexManager, error) {
+	mappingPath := filepath.Join("repository", "mappings", "starters_mapping.json")
+	mappingData, err := os.ReadFile(mappingPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read mapping file: %w", err)
+	}
+
+	// Validate JSON
+	var temp map[string]interface{}
+	if err := json.Unmarshal(mappingData, &temp); err != nil {
+		return nil, fmt.Errorf("invalid mapping JSON: %w", err)
+	}
+
+	return &IndexManager{
+		client:      client,
+		mappingData: mappingData,
+	}, nil
 }
 
 func (im *IndexManager) CreateIndex(ctx context.Context) error {
@@ -36,7 +56,7 @@ func (im *IndexManager) CreateIndex(ctx context.Context) error {
 
 	createReq := esapi.IndicesCreateRequest{
 		Index: starterIndexName,
-		Body:  bytes.NewReader([]byte(IndexMappingJSON)),
+		Body:  bytes.NewReader(im.mappingData),
 	}
 
 	createRes, err := createReq.Do(ctx, im.client)

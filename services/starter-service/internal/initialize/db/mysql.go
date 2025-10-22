@@ -3,9 +3,7 @@ package db
 import (
 	"fmt"
 	"log"
-	"net/url"
 	"os"
-	"strings"
 	"time"
 
 	"gorm.io/driver/mysql"
@@ -16,12 +14,7 @@ import (
 
 var DB *gorm.DB
 
-func InitMySQL(dburi string) (*gorm.DB, error) {
-	dsn, err := buildDSN(dburi)
-	if err != nil {
-		return nil, err
-	}
-
+func InitMySQL(dsn string) (*gorm.DB, error) {
 	// GORM logger
 	newLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags),
@@ -57,42 +50,4 @@ func InitMySQL(dburi string) (*gorm.DB, error) {
 
 	log.Println("Database connection established successfully.")
 	return DB, nil
-}
-
-func buildDSN(uri string) (string, error) {
-	if uri == "" {
-		return "", fmt.Errorf("database URI is not configured")
-	}
-
-	parsed, err := url.Parse(uri)
-	if err != nil {
-		return "", fmt.Errorf("invalid database URI: %w", err)
-	}
-
-	if parsed.Scheme != "mysql" {
-		return "", fmt.Errorf("unsupported database scheme: %s", parsed.Scheme)
-	}
-
-	username := parsed.User.Username()
-	if username == "" {
-		return "", fmt.Errorf("database URI must include username")
-	}
-
-	password, _ := parsed.User.Password()
-	host := parsed.Host
-	if host == "" {
-		return "", fmt.Errorf("database URI must include host")
-	}
-
-	database := strings.TrimPrefix(parsed.Path, "/")
-	if database == "" {
-		return "", fmt.Errorf("database URI must include database name")
-	}
-
-	query := parsed.RawQuery
-	if query == "" {
-		query = "charset=utf8mb4&parseTime=True&loc=Local"
-	}
-
-	return fmt.Sprintf("%s:%s@tcp(%s)/%s?%s", username, password, host, database, query), nil
 }

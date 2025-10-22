@@ -20,7 +20,6 @@ var (
 	_ departmentdto.DepartmentDeleteAPIResponse
 	_ businessunitdto.BusinessUnitDetailResponse
 	_ businessunitdto.BusinessUnitListAPIResponse
-	_ businessunitdto.BusinessUnitDetailAPIResponse
 	_ shareddto.GenericAPIResponse
 )
 

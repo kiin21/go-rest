@@ -1,3 +1,4 @@
+# TODO: add readme docs for notification service
 # Starter Management API
 
 Backend Go service for managing starters, departments, and business units. Core data lives in MySQL, while Kafka and

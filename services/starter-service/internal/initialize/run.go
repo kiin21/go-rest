@@ -2,21 +2,21 @@ package initialize
 
 import (
 	"log"
-	"strings"
 
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/gin-gonic/gin"
 	"github.com/kiin21/go-rest/pkg/httputil"
+	"github.com/kiin21/go-rest/pkg/utils"
 	"github.com/kiin21/go-rest/services/starter-service/internal/config"
 	initDB "github.com/kiin21/go-rest/services/starter-service/internal/initialize/db"
 	initES "github.com/kiin21/go-rest/services/starter-service/internal/initialize/elasticsearch"
 	initBroker "github.com/kiin21/go-rest/services/starter-service/internal/initialize/messagebroker"
 	initStarter "github.com/kiin21/go-rest/services/starter-service/internal/initialize/starter"
-	domainmessaging "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/messaging"
+	domainMq "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/messaging"
 	persistentMySQL "github.com/kiin21/go-rest/services/starter-service/internal/starter/infrastructure/persistence/repository/mysql"
 )
 
-func Run() (*gin.Engine, string, domainmessaging.NotificationProducer, domainmessaging.StarterConsumer) {
+func Run() (*gin.Engine, string, domainMq.NotificationProducer, domainMq.StarterConsumer) {
 	// 1> Read config -> environment variables
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -32,8 +32,8 @@ func Run() (*gin.Engine, string, domainmessaging.NotificationProducer, domainmes
 	// 3> Initialize Elasticsearch client (optional)
 	var esClient *elasticsearch.Client
 	if cfg.ElasticsearchAddresses != "" {
-		addresses := strings.Split(cfg.ElasticsearchAddresses, ",")
-		esConfig := initES.Config{
+		addresses := utils.ParseCSVString(cfg.ElasticsearchAddresses, ",")
+		esConfig := elasticsearch.Config{
 			Addresses: addresses,
 			Username:  cfg.ElasticsearchUsername,
 			Password:  cfg.ElasticsearchPassword,
@@ -47,7 +47,7 @@ func Run() (*gin.Engine, string, domainmessaging.NotificationProducer, domainmes
 	}
 
 	// 4> Initialize Kafka notification producer
-	notificationProducer := initBroker.InitProducer(cfg)
+	producer := initBroker.InitProducer(cfg)
 
 	// 5> Prepare shared dependencies
 	requestURLResolver := httputil.NewRequestURLResolver()
@@ -60,16 +60,16 @@ func Run() (*gin.Engine, string, domainmessaging.NotificationProducer, domainmes
 		starterRepo,
 		departmentRepo,
 		businessUnitRepo,
-		notificationProducer,
+		producer,
 	)
 
 	starterHandler, searchRepo := initStarter.InitStarter(
-		esClient,
+		requestURLResolver,
 		starterRepo,
 		departmentRepo,
 		businessUnitRepo,
-		requestURLResolver,
-		notificationProducer,
+		esClient,
+		producer,
 	)
 
 	eventHandler := initBroker.InitEventHandler(searchRepo)
@@ -84,5 +84,5 @@ func Run() (*gin.Engine, string, domainmessaging.NotificationProducer, domainmes
 		starterHandler,
 	)
 
-	return r, cfg.ServerPort, notificationProducer, consumer
+	return r, cfg.ServerPort, producer, consumer
 }
