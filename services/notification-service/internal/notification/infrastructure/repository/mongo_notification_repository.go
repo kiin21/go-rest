@@ -33,22 +33,16 @@ func NewNotificationMongoRepository(collection *mongo.Collection) domainRepo.Not
 func (r *notificationMongoRepository) List(
 	ctx context.Context,
 	filter domainRepo.ListNotificationsFilter,
-	pagination httputil.ReqPagination,
+	pg httputil.ReqPagination,
 ) ([]*domainModel.Notification, int64, error) {
-	if pagination.Page <= 0 {
-		pagination.Page = 1
-	}
-	if pagination.Limit <= 0 {
-		pagination.Limit = 20
-	}
 
 	sortBy := mapSortField(filter.SortBy)
 	sortOrder := mapSortOrder(filter.SortOrder)
 
 	findOptions := options.Find()
 	findOptions.SetSort(bson.D{{Key: sortBy, Value: sortOrder}})
-	findOptions.SetSkip(int64((pagination.Page - 1) * pagination.Limit))
-	findOptions.SetLimit(int64(pagination.Limit))
+	findOptions.SetSkip(int64(pg.GetOffset()))
+	findOptions.SetLimit(int64(pg.GetLimit()))
 
 	cursor, err := r.collection.Find(ctx, bson.D{}, findOptions)
 	if err != nil {
@@ -62,7 +56,7 @@ func (r *notificationMongoRepository) List(
 		}
 	}(cursor, ctx)
 
-	results := make([]*domainModel.Notification, 0, pagination.Limit)
+	results := make([]*domainModel.Notification, 0, pg.GetLimit())
 	for cursor.Next(ctx) {
 		var doc document.NotificationDocument
 		if err := cursor.Decode(&doc); err != nil {

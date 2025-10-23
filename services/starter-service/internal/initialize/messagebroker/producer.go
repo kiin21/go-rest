@@ -12,7 +12,7 @@ import (
 )
 
 func InitProducer(cfg config.Config) domainMq.NotificationProducer {
-	brokers := utils.ParseCSVString(cfg.KafkaBrokers, ",")
+	brokers := utils.ParseString(cfg.KafkaBrokers, ",")
 	if len(brokers) == 0 || cfg.KafkaTopicNotifications == "" {
 		log.Printf("Warning: Kafka notification configuration incomplete, leader notifications disabled")
 		return nil

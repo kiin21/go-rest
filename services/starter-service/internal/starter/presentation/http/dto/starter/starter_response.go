@@ -22,16 +22,16 @@ type StarterResponse struct {
 	UpdatedAt    time.Time                  `json:"updated_at"`
 }
 
-// StarterEnrichedData holds related data for enrichment
-type StarterEnrichedData struct {
+// EnrichedData holds related data for enrichment
+type EnrichedData struct {
 	Departments   map[int64]*shared.DepartmentNested
 	LineManagers  map[int64]*shared.LineManagerNested
 	BusinessUnits map[int64]*shared.BusinessUnitNested
 }
 
 // FromDomainEnrichment adapts domain enrichment data to HTTP DTO structures.
-func FromDomainEnrichment(enriched *model.EnrichedData) *StarterEnrichedData {
-	result := &StarterEnrichedData{
+func FromDomainEnrichment(enriched *model.EnrichedData) *EnrichedData {
+	result := &EnrichedData{
 		Departments:   make(map[int64]*shared.DepartmentNested),
 		LineManagers:  make(map[int64]*shared.LineManagerNested),
 		BusinessUnits: make(map[int64]*shared.BusinessUnitNested),
@@ -92,7 +92,7 @@ func FromDomainEnrichment(enriched *model.EnrichedData) *StarterEnrichedData {
 }
 
 // FromDomainEnriched converts domain document to enriched response with related data
-func FromDomainEnriched(starter *model.Starter, enriched *StarterEnrichedData) *StarterResponse {
+func FromDomainEnriched(starter *model.Starter, enriched *EnrichedData) *StarterResponse {
 	if starter == nil {
 		return nil
 	}
@@ -109,13 +109,14 @@ func FromDomainEnriched(starter *model.Starter, enriched *StarterEnrichedData) *
 		UpdatedAt: starter.UpdatedAt(),
 	}
 
-	// Map Department
+	// Map DepartmentName
 	if starter.DepartmentID() != nil && enriched != nil {
 		deptID := *starter.DepartmentID()
 		if dept, ok := enriched.Departments[deptID]; ok {
 			response.Department = dept
 
 			// Map BusinessUnit using department ID as key
+			// TODO: clarify if we need to map business unit by each department id
 			if bu, ok := enriched.BusinessUnits[deptID]; ok {
 				response.BusinessUnit = bu
 			}
@@ -131,7 +132,7 @@ func FromDomainEnriched(starter *model.Starter, enriched *StarterEnrichedData) *
 }
 
 // FromStartersEnriched converts multiple domain entities to enriched responses
-func FromStartersEnriched(starters []*model.Starter, enriched *StarterEnrichedData) []*StarterResponse {
+func FromStartersEnriched(starters []*model.Starter, enriched *EnrichedData) []*StarterResponse {
 	responses := make([]*StarterResponse, len(starters))
 	for i, starter := range starters {
 		responses[i] = FromDomainEnriched(starter, enriched)

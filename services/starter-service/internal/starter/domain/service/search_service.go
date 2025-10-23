@@ -31,42 +31,6 @@ func NewStarterSearchService(
 	}
 }
 
-func (s *StarterSearchService) Search(
-	ctx context.Context,
-	query starterquery.ListStartersQuery,
-) (*httputil.PaginatedResult[*model.Starter], error) {
-	// Elasticsearch
-	starters, total, err := s.searchRepo.Search(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-
-	totalPages := int(total) / query.Pagination.Limit
-	if int(total)%query.Pagination.Limit > 0 {
-		totalPages++
-	}
-
-	var prev, next *string
-	if query.Pagination.Page > 1 {
-		value := strconv.Itoa(query.Pagination.Page - 1)
-		prev = &value
-	}
-	if query.Pagination.Page < totalPages {
-		value := strconv.Itoa(query.Pagination.Page + 1)
-		next = &value
-	}
-
-	return &httputil.PaginatedResult[*model.Starter]{
-		Data: starters,
-		Pagination: httputil.RespPagination{
-			Limit:      query.Pagination.Limit,
-			TotalItems: total,
-			Prev:       prev,
-			Next:       next,
-		},
-	}, nil
-}
-
 // IndexStarter publishes a starter indexing event to Kafka (call after Create/Update)
 func (s *StarterSearchService) IndexStarter(ctx context.Context, starter *model.Starter) error {
 	if s.kafkaProducer == nil {
@@ -80,8 +44,11 @@ func (s *StarterSearchService) IndexStarter(ctx context.Context, starter *model.
 		Name:      starter.Name(),
 	}
 
-	event := events.NewEvent(events.EventTypeStarterIndex, payload)
-	event.Key = starter.Domain()
+	event, err := events.NewEvent(events.EventTypeStarterIndex, payload)
+	if err != nil {
+		log.Printf("Failed to create starter index event: %v", err)
+		return err
+	}
 
 	if err := s.kafkaProducer.SendNotification(event); err != nil {
 		log.Printf("Failed to send starter index event: %v", err)
@@ -104,8 +71,11 @@ func (s *StarterSearchService) DeleteFromIndex(ctx context.Context, starter *mod
 		Name:      starter.Name(),
 	}
 
-	event := events.NewEvent(events.EventTypeStarterDelete, payload)
-	event.Key = starter.Domain() // Use domain as partition key
+	event, err := events.NewEvent(events.EventTypeStarterDelete, payload)
+	if err != nil {
+		log.Printf("Failed to create starter delete event: %v", err)
+		return err
+	}
 
 	if err := s.kafkaProducer.SendNotification(event); err != nil {
 		log.Printf("Failed to send starter delete event: %v", err)
@@ -115,43 +85,64 @@ func (s *StarterSearchService) DeleteFromIndex(ctx context.Context, starter *mod
 	return nil
 }
 
-// ReindexAll reindex all starters (for initial setup or data migration)
-func (s *StarterSearchService) ReindexAll(ctx context.Context) error {
-	const batchSize = 100
-	page := 1
-	totalIndexed := 0
-
-	for {
-		emptyQuery := starterquery.ListStartersQuery{
-			Pagination: httputil.ReqPagination{
-				Page: page, Limit: batchSize,
-			},
-		}
-
-		starters, total, err := s.repo.SearchByKeyword(ctx, emptyQuery)
-		if err != nil {
-			return err
-		}
-
-		if len(starters) == 0 {
-			break
-		}
-
-		// Bulk index to Elasticsearch
-		if err := s.searchRepo.BulkIndex(ctx, starters); err != nil {
-			return err
-		}
-
-		totalIndexed += len(starters)
-		log.Printf("Reindexed %d/%d starters", totalIndexed, total)
-
-		if int64(totalIndexed) >= total {
-			break
-		}
-
-		page++
+func (s *StarterSearchService) Search(
+	ctx context.Context,
+	query *starterquery.ListStartersQuery,
+) (*httputil.PaginatedResult[*model.Starter], error) {
+	// Elasticsearch search with query builder
+	starterIds, total, err := s.searchRepo.Search(ctx, query, s.buildSearchQuery)
+	if err != nil {
+		return nil, err
 	}
 
-	log.Printf("✅ Reindexing completed: %d starters indexed", totalIndexed)
+	starters, err := s.repo.FindByIDs(ctx, starterIds)
+
+	// TODO: refactor this kind of pagination
+	totalPages := int(total) / query.Pagination.GetLimit()
+	if int(total)%(query.Pagination.GetLimit()) > 0 {
+		totalPages++
+	}
+
+	var prev, next *string
+	if query.Pagination.GetPage() > 1 {
+		value := strconv.Itoa(query.Pagination.GetPage() - 1)
+		prev = &value
+	}
+	if query.Pagination.GetPage() < totalPages {
+		value := strconv.Itoa(query.Pagination.GetPage() + 1)
+		next = &value
+	}
+
+	return &httputil.PaginatedResult[*model.Starter]{
+		Data: starters,
+		Pagination: httputil.RespPagination{
+			Limit:      query.Pagination.GetLimit(),
+			TotalItems: total,
+			Prev:       prev,
+			Next:       next,
+		},
+	}, nil
+}
+
+func (s *StarterSearchService) buildSearchQuery(*starterquery.ListStartersQuery) map[string]interface{} {
+	// TODO: implement
 	return nil
+}
+
+// mapSearchByToFieldName maps the SearchBy parameter to Elasticsearch field name
+func (s *StarterSearchService) mapSearchByToFieldName(searchBy string) string {
+	// TODO: implement
+	return ""
+}
+
+// buildSortClause builds the sort clause for Elasticsearch
+func (s *StarterSearchService) buildSortClause(sortBy, sortOrder string) []interface{} {
+	// TODO: implement
+	return nil
+}
+
+// mapSortFieldToESField maps domain sort fields to Elasticsearch fields
+func (s *StarterSearchService) mapSortFieldToESField(sortBy string) string {
+	// TODO: implement
+	return ""
 }

@@ -8,11 +8,16 @@ import (
 	"github.com/kiin21/go-rest/services/starter-service/internal/config"
 	domainMq "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/messaging"
 	domainRepo "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/repository"
+	domainService "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/service"
 	infraMq "github.com/kiin21/go-rest/services/starter-service/internal/starter/infrastructure/messagebroker"
 )
 
-func InitEventHandler(repo domainRepo.StarterSearchRepository) *EventHandler {
-	return NewEventHandler(repo)
+func InitEventHandler(
+	starterSearchRepo domainRepo.StarterSearchRepository,
+	starterRepo domainRepo.StarterRepository,
+	enrichmentService *domainService.StarterEnrichmentService,
+) *EventHandler {
+	return NewEventHandler(starterRepo, starterSearchRepo, enrichmentService)
 }
 
 func InitGroupConsumer(cfg config.Config, handler *EventHandler) domainMq.StarterConsumer {
@@ -24,7 +29,7 @@ func InitGroupConsumer(cfg config.Config, handler *EventHandler) domainMq.Starte
 
 	// 2. Create a consumer group
 	consumerGroup, err := sarama.NewConsumerGroup(
-		utils.ParseCSVString(cfg.KafkaBrokers),
+		utils.ParseString(cfg.KafkaBrokers, ","),
 		cfg.KafkaConsumerGroup,
 		saramaConfig,
 	)

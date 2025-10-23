@@ -19,8 +19,6 @@ type DepartmentDetailResponse struct {
 	UpdatedAt        time.Time                  `json:"updated_at"`
 }
 
-// DepartmentNested represents a nested department object in a httputil.
-
 func FromDomainWithDetails(dept *model.DepartmentWithDetails) *DepartmentDetailResponse {
 	response := &DepartmentDetailResponse{
 		ID:        dept.ID,
@@ -70,7 +68,6 @@ func FromDomainWithDetails(dept *model.DepartmentWithDetails) *DepartmentDetailR
 	return response
 }
 
-// FromDomainsWithDetails converts slice of domain.DepartmentWithDetails to DTOs
 func FromDomainsWithDetails(depts []*model.DepartmentWithDetails) []*DepartmentDetailResponse {
 	responses := make([]*DepartmentDetailResponse, len(depts))
 	for i, dept := range depts {

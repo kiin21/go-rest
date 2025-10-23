@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net/http"
 	"strconv"
 
 	"github.com/kiin21/go-rest/pkg/events"
@@ -40,35 +39,35 @@ func NewOrganizationApplicationService(
 	}
 }
 
-func (s *OrganizationApplicationService) GetAllDepartments(ctx context.Context, query departmentquery.ListDepartmentsQuery) (*httputil.PaginatedResult[*model.DepartmentWithDetails], error) {
-	filter := model.DepartmentListFilter{BusinessUnitID: query.BusinessUnitID}
+func (s *OrganizationApplicationService) GetAllDepartments(ctx context.Context, query *departmentquery.ListDepartmentsQuery) (*httputil.PaginatedResult[*model.DepartmentWithDetails], error) {
+	filter := &model.DepartmentListFilter{BusinessUnitID: query.BusinessUnitID}
 
-	departments, total, err := s.departmentRepo.ListWithDetails(ctx, filter, query.Pagination)
+	departments, total, err := s.departmentRepo.ListWithDetails(ctx, filter, &query.Pagination)
 	if err != nil {
 		return nil, err
 	}
 
-	totalPages := int(total) / query.Pagination.Limit
-	if int(total)%query.Pagination.Limit > 0 {
+	totalPages := int(total) / query.Pagination.GetLimit()
+	if int(total)%(query.Pagination.GetLimit()) > 0 {
 		totalPages++
 	}
 
 	var prev *string = nil
 	var next *string = nil
 
-	if query.Pagination.Page > 1 {
-		value := strconv.Itoa(query.Pagination.Page - 1)
+	if query.Pagination.GetPage() > 1 {
+		value := strconv.Itoa(query.Pagination.GetPage() - 1)
 		prev = &value
 	}
-	if query.Pagination.Page < totalPages {
-		value := strconv.Itoa(query.Pagination.Page + 1)
+	if query.Pagination.GetPage() < totalPages {
+		value := strconv.Itoa(query.Pagination.GetPage() + 1)
 		next = &value
 	}
 
 	return &httputil.PaginatedResult[*model.DepartmentWithDetails]{
 		Data: departments,
 		Pagination: httputil.RespPagination{
-			Limit:      query.Pagination.Limit,
+			Limit:      query.Pagination.GetLimit(),
 			TotalItems: total,
 			Prev:       prev,
 			Next:       next,
@@ -76,9 +75,9 @@ func (s *OrganizationApplicationService) GetAllDepartments(ctx context.Context, 
 	}, nil
 }
 
-func (s *OrganizationApplicationService) GetOneDepartment(ctx context.Context, query departmentquery.GetDepartmentQuery) (*model.DepartmentWithDetails, error) {
+func (s *OrganizationApplicationService) GetOneDepartment(ctx context.Context, ID int64) (*model.DepartmentWithDetails, error) {
 	ids := make([]int64, 0, 1)
-	ids = append(ids, query.ID)
+	ids = append(ids, ID)
 
 	departments, err := s.departmentRepo.FindByIDsWithDetails(ctx, ids)
 
@@ -92,7 +91,7 @@ func (s *OrganizationApplicationService) GetOneDepartment(ctx context.Context, q
 	return departments[0], nil
 }
 
-func (s *OrganizationApplicationService) CreateDepartment(ctx context.Context, cmd departmentcommand.CreateDepartmentCommand) (*model.DepartmentWithDetails, error) {
+func (s *OrganizationApplicationService) CreateDepartment(ctx context.Context, cmd *departmentcommand.CreateDepartmentCommand) (*model.DepartmentWithDetails, error) {
 	department := &model.Department{
 		FullName:          cmd.FullName,
 		Shortname:         cmd.Shortname,
@@ -116,7 +115,7 @@ func (s *OrganizationApplicationService) CreateDepartment(ctx context.Context, c
 	return detailedDepartments[0], nil
 }
 
-func (s *OrganizationApplicationService) UpdateDepartment(ctx context.Context, cmd departmentcommand.UpdateDepartmentCommand) (*model.DepartmentWithDetails, error) {
+func (s *OrganizationApplicationService) UpdateDepartment(ctx context.Context, cmd *departmentcommand.UpdateDepartmentCommand) (*model.DepartmentWithDetails, error) {
 
 	ids := make([]int64, 0, 1)
 	ids = append(ids, cmd.ID)
@@ -150,82 +149,71 @@ func (s *OrganizationApplicationService) UpdateDepartment(ctx context.Context, c
 	return department, nil
 }
 
-func (s *OrganizationApplicationService) DeleteDepartment(ctx context.Context, cmd departmentcommand.DeleteDepartmentCommand) error {
-	return s.departmentRepo.Delete(ctx, cmd.ID)
+func (s *OrganizationApplicationService) DeleteDepartment(ctx context.Context, ID int64) error {
+	return s.departmentRepo.Delete(ctx, ID)
 }
 
-func (s *OrganizationApplicationService) AssignLeader(ctx context.Context, cmd departmentcommand.AssignLeaderCommand) (*model.DepartmentWithDetails, error) {
+func (s *OrganizationApplicationService) AssignLeader(ctx context.Context, cmd *departmentcommand.AssignLeaderCommand) (*model.DepartmentWithDetails, error) {
 	deptIDList := []int64{cmd.DepartmentID}
 	departments, err := s.departmentRepo.FindByIDsWithDetails(ctx, deptIDList)
 	if err != nil {
 		return nil, err
 	}
-
 	if len(departments) == 0 {
 		return nil, sharedDomain.ErrNotFound
 	}
 
-	department := departments[0]
+	oldDept := departments[0]
 	previousLeaderDomain := ""
-	if department.Leader != nil {
-		previousLeaderDomain = department.Leader.Domain
+	if oldDept.Leader != nil {
+		previousLeaderDomain = oldDept.Leader.Domain
 	}
 
-	switch cmd.LeaderIdentifierType {
-	case "id":
-		if cmd.LeaderID != nil {
-			department.LeaderID = cmd.LeaderID
-		}
-	case "domain":
-		if cmd.LeaderDomain != nil {
-			if s.starterRepo == nil {
-				return nil, httputil.NewAPIError(http.StatusNotImplemented, "starter repository not configured", nil)
-			}
+	if cmd.LeaderID != nil && cmd.LeaderDomain == nil { // assign by starter ID
+		oldDept.LeaderID = cmd.LeaderID
+	} else if cmd.LeaderID == nil && cmd.LeaderDomain != nil { // assign by starter domain
+		starter, err := s.starterRepo.FindByDomain(ctx, *cmd.LeaderDomain)
 
-			starter, err := s.starterRepo.FindByDomain(ctx, *cmd.LeaderDomain)
-			if err != nil {
-				if errors.Is(err, sharedDomain.ErrNotFound) {
-					return nil, sharedDomain.ErrNotFound
-				}
-				return nil, err
-			}
-
-			leaderID := starter.ID()
-			department.LeaderID = &leaderID
+		if err != nil {
+			return nil, err
 		}
-	default:
+
+		leaderID := starter.ID()
+		oldDept.LeaderID = &leaderID
+	} else {
 		return nil, sharedDomain.ErrInvalidInput
 	}
 
 	if err := s.departmentRepo.Update(ctx, &model.Department{
-		ID:                department.ID,
-		GroupDepartmentID: department.GroupDepartmentID,
-		FullName:          department.FullName,
-		Shortname:         department.Shortname,
-		BusinessUnitID:    department.BusinessUnitID,
-		LeaderID:          department.LeaderID,
-		CreatedAt:         department.CreatedAt,
-		UpdatedAt:         department.UpdatedAt,
-		DeletedAt:         department.DeletedAt,
+		ID:                oldDept.ID,
+		GroupDepartmentID: oldDept.GroupDepartmentID,
+		FullName:          oldDept.FullName,
+		Shortname:         oldDept.Shortname,
+		BusinessUnitID:    oldDept.BusinessUnitID,
+		LeaderID:          oldDept.LeaderID,
+		CreatedAt:         oldDept.CreatedAt,
+		UpdatedAt:         oldDept.UpdatedAt,
+		DeletedAt:         oldDept.DeletedAt,
 	}); err != nil {
 		return nil, err
 	}
 
-	updated, err := s.departmentRepo.FindByIDsWithDetails(ctx, []int64{department.ID})
+	updated, err := s.departmentRepo.FindByIDsWithDetails(ctx, []int64{oldDept.ID})
 	if err != nil {
 		return nil, err
 	}
 	if len(updated) == 0 {
 		return nil, sharedDomain.ErrNotFound
 	}
-	department = updated[0]
+	oldDept = updated[0]
 
-	s.publishLeaderAssignmentNotification(ctx, department, previousLeaderDomain)
+	// Send msg to a Kafka topic
+	s.publishLeaderAssignmentNotification(oldDept, previousLeaderDomain)
 
-	return department, nil
+	return oldDept, nil
 }
 
-func (s *OrganizationApplicationService) publishLeaderAssignmentNotification(ctx context.Context, department *model.DepartmentWithDetails, previousLeaderDomain string) {
+func (s *OrganizationApplicationService) publishLeaderAssignmentNotification(department *model.DepartmentWithDetails, previousLeaderDomain string) {
 	if s.notificationPub == nil || department == nil || department.Leader == nil {
 		return
 	}
@@ -247,38 +235,45 @@ func (s *OrganizationApplicationService) publishLeaderAssignmentNotification(ctx
 		Message:     message,
 	}
 
-	event := events.NewEvent(events.EventTypeNotificationLeaderAssignment, payload)
+	// Create event
+	event, err := events.NewEvent(events.EventTypeNotificationLeaderAssignment, payload)
+	if err != nil {
+		log.Printf("failed to create leader assignment notification event: %v", err)
+		return
+	}
 
 	if err := s.notificationPub.SendNotification(event); err != nil {
 		log.Printf("failed to publish leader assignment notification: %v", err)
 	}
 }
 
-func (s *OrganizationApplicationService) ListBusinessUnits(ctx context.Context, query businessunitquery.ListBusinessUnitsQuery) (*httputil.PaginatedResult[*model.BusinessUnit], error) {
+func (s *OrganizationApplicationService) ListBusinessUnits(
+	ctx context.Context, query *businessunitquery.ListBusinessUnitsQuery,
+) (*httputil.PaginatedResult[*model.BusinessUnit], error) {
 	units, total, err := s.businessUnitRepo.List(ctx, query.Pagination)
 	if err != nil {
 		return nil, err
 	}
 
-	totalPages := int(total) / query.Pagination.Limit
-	if int(total)%query.Pagination.Limit > 0 {
+	totalPages := int(total) / (query.Pagination.GetLimit())
+	if int(total)%(query.Pagination.GetLimit()) > 0 {
 		totalPages++
 	}
 
 	var prev, next *string
-	if query.Pagination.Page > 1 {
-		value := strconv.Itoa(query.Pagination.Page - 1)
+	if query.Pagination.GetPage() > 1 {
+		value := strconv.Itoa(query.Pagination.GetPage() - 1)
 		prev = &value
 	}
-	if query.Pagination.Page < totalPages {
-		value := strconv.Itoa(query.Pagination.Page + 1)
+	if query.Pagination.GetPage() < totalPages {
+		value := strconv.Itoa(query.Pagination.GetPage() + 1)
 		next = &value
 	}
 
 	return &httputil.PaginatedResult[*model.BusinessUnit]{
 		Data: units,
 		Pagination: httputil.RespPagination{
-			Limit:      query.Pagination.Limit,
+			Limit:      query.Pagination.GetLimit(),
 			TotalItems: total,
 			Prev:       prev,
 			Next:       next,
@@ -299,31 +294,32 @@ func (s *OrganizationApplicationService) GetBusinessUnit(ctx context.Context, id
 	return bus[0], nil
 }
 
-func (s *OrganizationApplicationService) ListBusinessUnitsWithDetails(ctx context.Context, query businessunitquery.ListBusinessUnitsQuery) (*httputil.PaginatedResult[*model.BusinessUnitWithDetails], error) {
+func (s *OrganizationApplicationService) ListBusinessUnitsWithDetails(ctx context.Context, query *businessunitquery.ListBusinessUnitsQuery) (*httputil.PaginatedResult[*model.BusinessUnitWithDetails], error) {
 	units, total, err := s.businessUnitRepo.ListWithDetails(ctx, query.Pagination)
 	if err != nil {
 		return nil, err
 	}
 
-	totalPages := int(total) / query.Pagination.Limit
-	if int(total)%query.Pagination.Limit > 0 {
+	totalPages := int(total) / query.Pagination.GetLimit()
+	if int(total)%(query.Pagination.GetLimit()) > 0 {
 		totalPages++
 	}
 
+	// TODO: refactor this kind of handling pagination into a common utility function
 	var prev, next *string
-	if query.Pagination.Page > 1 {
-		value := strconv.Itoa(query.Pagination.Page - 1)
+	if query.Pagination.GetPage() > 1 {
+		value := strconv.Itoa(query.Pagination.GetPage() - 1)
 		prev = &value
 	}
-	if query.Pagination.Page < totalPages {
-		value := strconv.Itoa(query.Pagination.Page + 1)
+	if query.Pagination.GetPage() < totalPages {
+		value := strconv.Itoa(query.Pagination.GetPage() + 1)
 		next = &value
 	}
 
 	return &httputil.PaginatedResult[*model.BusinessUnitWithDetails]{
 		Data: units,
 		Pagination: httputil.RespPagination{
-			Limit:      query.Pagination.Limit,
+			Limit:      query.Pagination.GetLimit(),
 			TotalItems: total,
 			Prev:       prev,
 			Next:       next,

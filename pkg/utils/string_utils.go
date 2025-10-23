@@ -4,10 +4,7 @@ import (
 	"strings"
 )
 
-// ParseCSVString splits a comma-separated string, trims spaces,
-// and removes any empty elements.
-func ParseCSVString(input string, sep string) []string {
-	// Split by comma
+func ParseString(input string, sep string) []string {
 	parts := strings.Split(input, sep)
 
 	// Prepare a clean slice

@@ -24,7 +24,7 @@ func InitGroupConsumer(cfg config.Config, handler *EventHandler) domainMq.Notifi
 
 	// 2. Create a consumer group
 	consumerGroup, err := sarama.NewConsumerGroup(
-		utils.ParseCSVString(cfg.KafkaBrokers, ","),
+		utils.ParseString(cfg.KafkaBrokers, ","),
 		cfg.KafkaConsumerGroup,
 		saramaConfig,
 	)

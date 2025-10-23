@@ -2,6 +2,7 @@ package events
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,28 +11,34 @@ import (
 type Event struct {
 	ID        uuid.UUID       `json:"id"`
 	Type      string          `json:"type"`
-	Key       string          `json:"key,omitempty"`
-	Domain    string          `json:"domain,omitempty"`
+	Payload   json.RawMessage `json:"payload,omitempty"`
 	Timestamp time.Time       `json:"timestamp"`
-	Payload   json.RawMessage `json:"payload,omitempty"` // Change to json.RawMessage
 }
 
-func NewEvent(eventType string, eventPayload interface{}) *Event {
-	payloadBytes, _ := json.Marshal(eventPayload)
+func NewEvent(eventType string, eventPayload interface{}) (*Event, error) {
+	payloadBytes, err := json.Marshal(eventPayload)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal event payload: %w", err)
+	}
+
 	return &Event{
 		ID:        uuid.New(),
 		Type:      eventType,
 		Timestamp: time.Now().UTC(),
 		Payload:   payloadBytes,
-	}
+	}, nil
 }
 
 func (e *Event) ToBytes() ([]byte, error) {
-	return json.Marshal(e)
+	bytes, err := json.Marshal(e)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal event: %w", err)
+	}
+	return bytes, nil
 }
 
-// UnmarshalData unmarshal the event payload into the provided target
-func (e *Event) UnmarshalData(target interface{}) error {
+func (e *Event) UnmarshalPayload(target interface{}) error {
 	if len(e.Payload) == 0 {
 		return nil
 	}
@@ -41,7 +48,7 @@ func (e *Event) UnmarshalData(target interface{}) error {
 func BytesToEvent(data []byte) (*Event, error) {
 	var event Event
 	if err := json.Unmarshal(data, &event); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal event: %w", err)
 	}
 	return &event, nil
 }

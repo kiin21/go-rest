@@ -51,8 +51,8 @@ func (h *NotiHandler) getList(ctx *gin.Context) (res interface{}, err error) {
 
 	query := notiapp.ListNotificationsQuery{
 		Pagination: httputil.ReqPagination{
-			Page:  req.Page,
-			Limit: req.Limit,
+			Page:  &req.Page,
+			Limit: &req.Limit,
 		},
 		SortBy:    req.SortBy,
 		SortOrder: req.SortOrder,
@@ -67,6 +67,6 @@ func (h *NotiHandler) getList(ctx *gin.Context) (res interface{}, err error) {
 
 	return &httputil.PaginatedResult[*dto.ListNotiResponse]{
 		Data:       responseData,
-		Pagination: httputil.DecoratePagination(ctx, h.urlResolver, rawResult.Pagination),
+		Pagination: httputil.CursorPagination(ctx, rawResult.Pagination),
 	}, nil
 }

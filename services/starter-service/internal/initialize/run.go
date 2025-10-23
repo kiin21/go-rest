@@ -32,7 +32,7 @@ func Run() (*gin.Engine, string, domainMq.NotificationProducer, domainMq.Starter
 	// 3> Initialize Elasticsearch client (optional)
 	var esClient *elasticsearch.Client
 	if cfg.ElasticsearchAddresses != "" {
-		addresses := utils.ParseCSVString(cfg.ElasticsearchAddresses, ",")
+		addresses := utils.ParseString(cfg.ElasticsearchAddresses, ",")
 		esConfig := elasticsearch.Config{
 			Addresses: addresses,
 			Username:  cfg.ElasticsearchUsername,
@@ -56,15 +56,13 @@ func Run() (*gin.Engine, string, domainMq.NotificationProducer, domainMq.Starter
 	departmentRepo := persistentMySQL.NewDepartmentRepository(db)
 
 	orgHandler := initStarter.InitOrganization(
-		requestURLResolver,
 		starterRepo,
 		departmentRepo,
 		businessUnitRepo,
 		producer,
 	)
 
-	starterHandler, searchRepo := initStarter.InitStarter(
-		requestURLResolver,
+	starterHandler, searchRepo, starterEnrichService := initStarter.InitStarter(
 		starterRepo,
 		departmentRepo,
 		businessUnitRepo,
@@ -72,7 +70,7 @@ func Run() (*gin.Engine, string, domainMq.NotificationProducer, domainMq.Starter
 		producer,
 	)
 
-	eventHandler := initBroker.InitEventHandler(searchRepo)
+	eventHandler := initBroker.InitEventHandler(searchRepo, starterRepo, starterEnrichService)
 
 	consumer := initBroker.InitGroupConsumer(cfg, eventHandler)
 

@@ -134,17 +134,26 @@ func (s *StarterEnrichmentService) loadLineManagers(
 	lineManagerIDs map[int64]bool,
 	enriched *model.EnrichedData,
 ) error {
+	// Empty input
+	if len(lineManagerIDs) == 0 {
+		return nil
+	}
 	ids := make([]int64, 0, len(lineManagerIDs))
 	for id := range lineManagerIDs {
 		ids = append(ids, id)
 	}
 
-	for _, id := range ids {
-		manager, err := s.starterRepo.FindByID(ctx, id)
-		if err != nil {
-			continue // Skip if not found.
-		}
+	// Batch query
+	managers, err := s.starterRepo.FindByIDs(ctx, ids)
+	if err != nil {
+		return fmt.Errorf("failed to load line managers: %w", err)
+	}
 
+	if enriched.LineManagers == nil {
+		enriched.LineManagers = make(map[int64]*model.LineManagerNested)
+	}
+	// Map managers to enriched data
+	for _, manager := range managers {
 		enriched.LineManagers[manager.ID()] = &model.LineManagerNested{
 			ID:       manager.ID(),
 			Domain:   manager.Domain(),

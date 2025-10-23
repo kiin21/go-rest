@@ -18,11 +18,24 @@ func NewDepartmentRepository(db *gorm.DB) repo.DepartmentRepository {
 	return &DepartmentRepository{db: db}
 }
 
-func (r *DepartmentRepository) ListWithDetails(
-	ctx context.Context,
-	filter model.DepartmentListFilter,
-	pg httputil.ReqPagination,
-) ([]*model.DepartmentWithDetails, int64, error) {
+func (r *DepartmentRepository) FindByIDs(ctx context.Context, ids []int64) ([]*model.Department, error) {
+	if len(ids) == 0 {
+		return []*model.Department{}, nil
+	}
+	var entities []entity.DepartmentEntity
+	if err := r.db.WithContext(ctx).
+		Where("id IN ? AND deleted_at IS NULL", ids).
+		Find(&entities).Error; err != nil {
+		return nil, err
+	}
+	result := make([]*model.Department, len(entities))
+	for i, e := range entities {
+		result[i] = r.toModel(&e)
+	}
+	return result, nil
+}
+
+func (r *DepartmentRepository) ListWithDetails(ctx context.Context, filter *model.DepartmentListFilter, pg *httputil.ReqPagination) ([]*model.DepartmentWithDetails, int64, error) {
 	// View struct
 	type DeptWithCounts struct {
 		ID                int64  `gorm:"column:id"`
@@ -51,8 +64,7 @@ func (r *DepartmentRepository) ListWithDetails(
 	}
 
 	// Main query with pagination
-	offset := (pg.Page - 1) * pg.Limit
-	if err := baseQuery.Offset(offset).Limit(pg.Limit).Find(&departmentWithCounts).Error; err != nil {
+	if err := baseQuery.Offset(pg.GetOffset()).Limit(pg.GetLimit()).Find(&departmentWithCounts).Error; err != nil {
 		return nil, 0, err
 	}
 

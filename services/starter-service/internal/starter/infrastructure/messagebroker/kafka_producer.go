@@ -30,7 +30,7 @@ func (p *KafkaNotificationProducer) SendNotification(event *events.Event) error 
 
 	msg := &sarama.ProducerMessage{
 		Topic: p.topic,
-		Key:   sarama.StringEncoder(event.Key),
+		Key:   sarama.StringEncoder(event.Type),
 		Value: sarama.ByteEncoder(eventBytes),
 	}
 

@@ -14,7 +14,7 @@ import (
 
 func InitRouter(
 	logLevel string,
-	requestURLResolver httputil.RequestURLResolver,
+	requestURLResolver *httputil.RequestURLResolver,
 	orgHandler *orgHttp.OrganizationHandler,
 	starterHandler *orgHttp.StarterHandler,
 ) *gin.Engine {

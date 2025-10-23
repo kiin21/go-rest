@@ -45,8 +45,7 @@ func (r *BusinessUnitRepository) List(ctx context.Context, pg httputil.ReqPagina
 		return nil, 0, err
 	}
 
-	offset := (pg.Page - 1) * pg.Limit
-	if err := query.Offset(offset).Limit(pg.Limit).Find(&entities).Error; err != nil {
+	if err := query.Offset(pg.GetOffset()).Limit(pg.GetLimit()).Find(&entities).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -80,16 +79,11 @@ func (r *BusinessUnitRepository) ListWithDetails(ctx context.Context, pg httputi
 		return nil, 0, err
 	}
 
-	offset := (pg.Page - 1) * pg.Limit
-	if offset < 0 {
-		offset = 0
-	}
-
 	if err := query.
 		Preload("Company").
 		Preload("Leader").
 		Order("name ASC").
-		Offset(offset).Limit(pg.Limit).
+		Offset(pg.GetOffset()).Limit(pg.GetLimit()).
 		Find(&models).
 		Error; err != nil {
 		return nil, 0, err

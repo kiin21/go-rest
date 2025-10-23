@@ -1,5 +1,10 @@
 package starter
 
+import (
+	"github.com/kiin21/go-rest/pkg/httputil"
+	"github.com/kiin21/go-rest/services/starter-service/internal/starter/application/dto/starter/query"
+)
+
 type ListStartersRequest struct {
 	Query    *string `form:"q"`
 	SearchBy string  `form:"search_by" binding:"omitempty,oneof=fullname domain dept_name bu_name"`
@@ -23,5 +28,23 @@ func (r *ListStartersRequest) SetDefaults() {
 	}
 	if r.SortOrder == "" {
 		r.SortOrder = "asc"
+	}
+}
+
+func (r *ListStartersRequest) ToQuery() *query.ListStartersQuery {
+	var keyword string
+	if r.Query != nil {
+		keyword = *r.Query
+	}
+
+	return &query.ListStartersQuery{
+		Pagination: httputil.ReqPagination{
+			Page:  &r.Page,
+			Limit: &r.Limit,
+		},
+		Keyword:   keyword,
+		SearchBy:  r.SearchBy,
+		SortBy:    r.SortBy,
+		SortOrder: r.SortOrder,
 	}
 }

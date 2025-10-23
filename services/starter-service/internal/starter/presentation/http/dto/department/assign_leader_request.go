@@ -1,8 +1,9 @@
 package department
 
 import (
-	"errors"
 	"fmt"
+
+	"github.com/kiin21/go-rest/services/starter-service/internal/starter/application/dto/department/command"
 )
 
 // LeaderInfo represents the identifier details for a department leader.
@@ -20,28 +21,20 @@ func (r *AssignLeaderRequest) Validate() error {
 	hasDomain := r.Leader.Domain != nil
 
 	if !hasID && !hasDomain {
-		return errors.New("either leader.id or leader.domain must be provided")
+		return fmt.Errorf("either 'leader.id' or 'leader.domain' must be provided")
 	}
 
 	if hasID && hasDomain {
-		return errors.New("cannot provide both leader.id and leader.domain")
+		return fmt.Errorf("cannot provide both 'leader.id' and 'leader.domain', choose one")
 	}
 
 	return nil
 }
 
-func (r *AssignLeaderRequest) GetLeaderIdentifier() (interface{}, string, error) {
-	if err := r.Validate(); err != nil {
-		return nil, "", err
+func (r *AssignLeaderRequest) ToCommand(deptId int64) *command.AssignLeaderCommand {
+	return &command.AssignLeaderCommand{
+		DepartmentID: deptId,
+		LeaderID:     r.Leader.ID,
+		LeaderDomain: r.Leader.Domain,
 	}
-
-	if r.Leader.ID != nil {
-		return *r.Leader.ID, "id", nil
-	}
-
-	if r.Leader.Domain != nil {
-		return *r.Leader.Domain, "domain", nil
-	}
-
-	return nil, "", fmt.Errorf("no valid leader identifier found")
 }

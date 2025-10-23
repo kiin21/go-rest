@@ -135,3 +135,31 @@ func (s *Starter) UpdateInfo(name, email, mobile, workPhone, jobTitle string, de
 
 	return nil
 }
+
+type StarterESDoc struct {
+	id       int64
+	domain   string
+	name     string
+	deptName string
+	buName   string
+}
+
+func (s *StarterESDoc) ID() int64                { return s.id }
+func (s *StarterESDoc) Domain() string           { return s.domain }
+func (s *StarterESDoc) Name() string             { return s.name }
+func (s *StarterESDoc) DepartmentName() string   { return s.deptName }
+func (s *StarterESDoc) BusinessUnitName() string { return s.buName }
+
+func NewStarterESDocFromStarter(starter *Starter, enriched *EnrichedData) *StarterESDoc {
+	if starter == nil {
+		return nil
+	}
+
+	return &StarterESDoc{
+		id:       starter.ID(),
+		domain:   starter.Domain(),
+		name:     starter.Name(),
+		deptName: enriched.Departments[*starter.DepartmentID()].Name,
+		buName:   enriched.BusinessUnits[*starter.DepartmentID()].Name,
+	}
+}

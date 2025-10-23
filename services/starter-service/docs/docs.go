@@ -185,7 +185,7 @@ const docTemplate = `{
                 "summary": "Create department",
                 "parameters": [
                     {
-                        "description": "Department payload",
+                        "description": "DepartmentName payload",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -230,7 +230,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
-                        "description": "Department ID",
+                        "description": "DepartmentName ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -276,7 +276,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
-                        "description": "Department ID",
+                        "description": "DepartmentName ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -325,7 +325,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
-                        "description": "Department ID",
+                        "description": "DepartmentName ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -385,7 +385,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
-                        "description": "Department ID",
+                        "description": "DepartmentName ID",
                         "name": "id",
                         "in": "path",
                         "required": true

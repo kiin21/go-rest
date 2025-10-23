@@ -60,7 +60,7 @@ func (h *EventHandler) handleLeaderAssignment(ctx context.Context, event *events
 	// BytesToEvent event payload
 	var payload events.LeaderAssignmentEventPayload
 
-	if err := event.UnmarshalData(&payload); err != nil {
+	if err := event.UnmarshalPayload(&payload); err != nil {
 		log.Printf("Failed to unmarshal leader assignment event: %v", err)
 		return err
 	}

@@ -46,22 +46,3 @@ func Wrap(handler HandlerFunc) func(c *gin.Context) {
 		SuccessResponse(ctx, res)
 	}
 }
-
-func DecoratePagination(ctx *gin.Context, resolver RequestURLResolver, pagination RespPagination) RespPagination {
-	updated := pagination
-	if pagination.Prev != nil {
-		prevURL := AbsoluteURLWithPage(ctx, resolver, *pagination.Prev)
-		updated.Prev = &prevURL
-	}
-	if pagination.Next != nil {
-		nextURL := AbsoluteURLWithPage(ctx, resolver, *pagination.Next)
-		updated.Next = &nextURL
-	}
-	return updated
-}
-
-func AbsoluteURLWithPage(ctx *gin.Context, resolver RequestURLResolver, page string) string {
-	query := ctx.Request.URL.Query()
-	query.Set("page", page)
-	return resolver.AbsoluteURL(ctx, ctx.Request.URL.Path, query)
-}

@@ -32,7 +32,7 @@ type Config struct {
 }
 
 func LoadConfig() (config Config, err error) {
-	viper.SetConfigFile(".env_dev")
+	viper.SetConfigFile(".env_local")
 	viper.SetConfigType("env")
 
 	viper.AutomaticEnv()

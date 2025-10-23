@@ -23,17 +23,26 @@ func NewStarterRepository(db *gorm.DB) repo.StarterRepository {
 	return &StarterRepository{db: db}
 }
 
-func (r *StarterRepository) FindByID(ctx context.Context, id int64) (*model.Starter, error) {
-	var starterEntity entity.StarterEntity
-	err := r.db.WithContext(ctx).Where("id = ? AND deleted_at IS NULL", id).First(&starterEntity).Error
+func (r *StarterRepository) FindByIDs(ctx context.Context, ids []int64) ([]*model.Starter, error) {
+	var starterEntities []entity.StarterEntity
+	err := r.db.WithContext(ctx).
+		Where("id IN ? AND deleted_at IS NULL", ids).
+		Find(&starterEntities).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, sharedDomain.ErrNotFound
-		}
-		return nil, err
+		return nil, fmt.Errorf("failed to find starters by ids: %w", err)
 	}
 
-	return r.toModel(&starterEntity)
+	// Convert entities to models
+	starters := make([]*model.Starter, 0, len(starterEntities))
+	for _, starterEntity := range starterEntities {
+		starter, err := r.toModel(&starterEntity)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert starterEntity to model: %w", err)
+		}
+		starters = append(starters, starter)
+	}
+
+	return starters, nil
 }
 
 func (r *StarterRepository) FindByDomain(ctx context.Context, domain string) (*model.Starter, error) {
@@ -49,7 +58,7 @@ func (r *StarterRepository) FindByDomain(ctx context.Context, domain string) (*m
 	return r.toModel(&starterEntity)
 }
 
-func (r *StarterRepository) SearchByKeyword(ctx context.Context, listStarterQuery starterquery.ListStartersQuery) ([]*model.Starter, int64, error) {
+func (r *StarterRepository) SearchByKeyword(ctx context.Context, listStarterQuery *starterquery.ListStartersQuery) ([]*model.Starter, int64, error) {
 	query := r.db.WithContext(ctx).Model(&entity.StarterEntity{}).Where("deleted_at IS NULL")
 
 	// Apply keyword search
@@ -66,8 +75,8 @@ func (r *StarterRepository) SearchByKeyword(ctx context.Context, listStarterQuer
 	query = r.applySort(query, listStarterQuery.SortBy, listStarterQuery.SortOrder)
 
 	// Apply pagination
-	offset := (listStarterQuery.Pagination.Page - 1) * listStarterQuery.Pagination.Limit
-	query = query.Offset(offset).Limit(listStarterQuery.Pagination.Limit)
+	offset := (*listStarterQuery.Pagination.Page - 1) * *listStarterQuery.Pagination.Limit
+	query = query.Offset(offset).Limit(*listStarterQuery.Pagination.Limit)
 
 	var models []entity.StarterEntity
 	if err := query.Find(&models).Error; err != nil {

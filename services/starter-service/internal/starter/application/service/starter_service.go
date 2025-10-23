@@ -16,20 +16,23 @@ import (
 )
 
 type StarterApplicationService struct {
-	repo              repo.StarterRepository
+	starterRepo       repo.StarterRepository
+	searchRepo        repo.StarterSearchRepository
 	domainService     *domainService.StarterDomainService
 	enrichmentService *domainService.StarterEnrichmentService
-	searchService     *StarterSearchService
+	searchService     *domainService.StarterSearchService
 }
 
 func NewStarterApplicationService(
-	repo repo.StarterRepository,
+	starterRepo repo.StarterRepository,
+	searchRepo repo.StarterSearchRepository,
 	domainService *domainService.StarterDomainService,
 	enrichmentService *domainService.StarterEnrichmentService,
-	searchService *StarterSearchService,
+	searchService *domainService.StarterSearchService,
 ) *StarterApplicationService {
 	return &StarterApplicationService{
-		repo:              repo,
+		starterRepo:       starterRepo,
+		searchRepo:        searchRepo,
 		domainService:     domainService,
 		searchService:     searchService,
 		enrichmentService: enrichmentService,
@@ -38,7 +41,7 @@ func NewStarterApplicationService(
 
 func (s *StarterApplicationService) ListStarters(
 	ctx context.Context,
-	query starterquery.ListStartersQuery,
+	query *starterquery.ListStartersQuery,
 ) (*httputil.PaginatedResult[*model.Starter], error) {
 
 	// Use Elasticsearch if a keyword is provided and Elasticsearch is enabled
@@ -56,33 +59,33 @@ func (s *StarterApplicationService) ListStarters(
 	)
 	log.Printf("Using MySQL for search: keyword=%s", query.Keyword)
 	if query.Keyword != "" {
-		starters, total, err = s.repo.SearchByKeyword(ctx, query)
+		starters, total, err = s.starterRepo.SearchByKeyword(ctx, query)
 	} else {
-		starters, total, err = s.repo.SearchByKeyword(ctx, query)
+		starters, total, err = s.starterRepo.SearchByKeyword(ctx, query)
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	totalPages := int(total) / query.Pagination.Limit
-	if int(total)%query.Pagination.Limit > 0 {
+	totalPages := int(total) / query.Pagination.GetLimit()
+	if int(total)%(query.Pagination.GetLimit()) > 0 {
 		totalPages++
 	}
 
 	var prev, next *string
-	if query.Pagination.Page > 1 {
-		value := strconv.Itoa(query.Pagination.Page - 1)
+	if query.Pagination.GetPage() > 1 {
+		value := strconv.Itoa(query.Pagination.GetPage() - 1)
 		prev = &value
 	}
-	if query.Pagination.Page < totalPages {
-		value := strconv.Itoa(query.Pagination.Page + 1)
+	if query.Pagination.GetPage() < totalPages {
+		value := strconv.Itoa(query.Pagination.GetPage() + 1)
 		next = &value
 	}
 
 	return &httputil.PaginatedResult[*model.Starter]{
 		Data: starters,
 		Pagination: httputil.RespPagination{
-			Limit:      query.Pagination.Limit,
+			Limit:      query.Pagination.GetLimit(),
 			TotalItems: total,
 			Prev:       prev,
 			Next:       next,
@@ -90,7 +93,7 @@ func (s *StarterApplicationService) ListStarters(
 	}, nil
 }
 
-func (s *StarterApplicationService) CreateStarter(ctx context.Context, command startercommand.CreateStarterCommand) (*model.Starter, error) {
+func (s *StarterApplicationService) CreateStarter(ctx context.Context, command *startercommand.CreateStarterCommand) (*model.Starter, error) {
 	if err := s.domainService.ValidateDomainUniqueness(ctx, command.Domain); err != nil {
 		if errors.Is(err, sharedDomain.ErrDomainAlreadyExists) {
 			return nil, err
@@ -112,7 +115,7 @@ func (s *StarterApplicationService) CreateStarter(ctx context.Context, command s
 		return nil, err
 	}
 
-	if err := s.repo.Create(ctx, starter); err != nil {
+	if err := s.starterRepo.Create(ctx, starter); err != nil {
 		return nil, err
 	}
 
@@ -128,7 +131,7 @@ func (s *StarterApplicationService) CreateStarter(ctx context.Context, command s
 }
 
 func (s *StarterApplicationService) GetStarterByDomain(ctx context.Context, domainName string) (*model.Starter, error) {
-	starter, err := s.repo.FindByDomain(ctx, domainName)
+	starter, err := s.starterRepo.FindByDomain(ctx, domainName)
 	if err != nil {
 		return nil, err
 	}
@@ -136,8 +139,8 @@ func (s *StarterApplicationService) GetStarterByDomain(ctx context.Context, doma
 	return starter, nil
 }
 
-func (s *StarterApplicationService) UpdateStarter(ctx context.Context, command startercommand.UpdateStarterCommand) (*model.Starter, error) {
-	starter, err := s.repo.FindByDomain(ctx, command.Domain)
+func (s *StarterApplicationService) UpdateStarter(ctx context.Context, command *startercommand.UpdateStarterCommand) (*model.Starter, error) {
+	starter, err := s.starterRepo.FindByDomain(ctx, command.Domain)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +184,7 @@ func (s *StarterApplicationService) UpdateStarter(ctx context.Context, command s
 		return nil, err
 	}
 
-	if err := s.repo.Update(ctx, starter); err != nil {
+	if err := s.starterRepo.Update(ctx, starter); err != nil {
 		return nil, err
 	}
 
@@ -199,7 +202,7 @@ func (s *StarterApplicationService) UpdateStarter(ctx context.Context, command s
 // SoftDeleteStarter soft deletes a starter by domain
 func (s *StarterApplicationService) SoftDeleteStarter(ctx context.Context, domain string) error {
 	// Soft delete from MySQL
-	entity, err := s.repo.SoftDelete(ctx, domain)
+	entity, err := s.starterRepo.SoftDelete(ctx, domain)
 	if err != nil {
 		return err
 	}
@@ -218,4 +221,48 @@ func (s *StarterApplicationService) SoftDeleteStarter(ctx context.Context, domai
 
 func (s *StarterApplicationService) EnrichStarters(ctx context.Context, starters []*model.Starter) (*model.EnrichedData, error) {
 	return s.enrichmentService.EnrichStarters(ctx, starters)
+}
+
+func (s *StarterApplicationService) ReindexAll(ctx context.Context) error {
+	totalIndexed := 0
+	for {
+		batchSize := 100
+		page := 1
+
+		emptyQuery := &starterquery.ListStartersQuery{
+			Pagination: httputil.ReqPagination{
+				Page: &page, Limit: &batchSize,
+			},
+		}
+
+		starters, total, err := s.starterRepo.SearchByKeyword(ctx, emptyQuery)
+		if err != nil {
+			return err
+		}
+
+		enriched, err := s.EnrichStarters(ctx, starters)
+
+		esDocs := make([]*model.StarterESDoc, len(starters))
+		for i := range starters {
+			esDoc := model.NewStarterESDocFromStarter(starters[i], enriched)
+			esDocs[i] = esDoc
+		}
+
+		// Bulk index to Elasticsearch
+		if err := s.searchRepo.BulkIndex(ctx, esDocs); err != nil {
+			return err
+		}
+
+		totalIndexed += len(starters)
+		log.Printf("Reindexed %d/%d starters", totalIndexed, total)
+
+		if int64(totalIndexed) >= total {
+			break
+		}
+
+		page++
+	}
+
+	log.Printf("Reindexing completed: %d starters indexed", totalIndexed)
+	return nil
 }

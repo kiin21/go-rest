@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
-	"time"
 
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
@@ -24,8 +24,13 @@ func NewElasticsearchStarterRepository(client *elasticsearch.Client) repo.Starte
 	return &ElasticsearchStarterRepository{client: client}
 }
 
-func (r *ElasticsearchStarterRepository) Search(ctx context.Context, listStarterQuery starterquery.ListStartersQuery) ([]*model.Starter, int64, error) {
-	esQuery := r.buildSearchQuery(listStarterQuery)
+func (r *ElasticsearchStarterRepository) Search(
+	ctx context.Context,
+	listStarterQuery *starterquery.ListStartersQuery,
+	buildSearchQuery repo.SearchQueryBuilder,
+) ([]int64, int64, error) {
+	// Build ES query using the provided builder function
+	esQuery := buildSearchQuery(listStarterQuery)
 
 	// Execute search
 	var buf bytes.Buffer
@@ -33,8 +38,18 @@ func (r *ElasticsearchStarterRepository) Search(ctx context.Context, listStarter
 		return nil, 0, fmt.Errorf("error encoding query: %w", err)
 	}
 
-	// Pagination
-	from := (listStarterQuery.Pagination.Page - 1) * listStarterQuery.Pagination.Limit
+	// Extract pagination from query (type assertion)
+
+	page, limit := 1, 10
+
+	if listStarterQuery.Pagination.Page != nil {
+		page = *listStarterQuery.Pagination.Page
+	}
+	if listStarterQuery.Pagination.Limit != nil {
+		limit = *listStarterQuery.Pagination.Limit
+	}
+
+	from := (page - 1) * limit
 
 	res, err := r.client.Search(
 		r.client.Search.WithContext(ctx),
@@ -42,7 +57,7 @@ func (r *ElasticsearchStarterRepository) Search(ctx context.Context, listStarter
 		r.client.Search.WithBody(&buf),
 		r.client.Search.WithTrackTotalHits(true),
 		r.client.Search.WithFrom(from),
-		r.client.Search.WithSize(listStarterQuery.Pagination.Limit),
+		r.client.Search.WithSize(limit),
 	)
 
 	if err != nil {
@@ -51,12 +66,13 @@ func (r *ElasticsearchStarterRepository) Search(ctx context.Context, listStarter
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
-
+			// TODO: Handle error like this (search for "if err != nil")
 		}
 	}(res.Body)
 
 	if res.IsError() {
-		return nil, 0, fmt.Errorf("elasticsearch error: %s", res.String())
+		body, _ := io.ReadAll(res.Body)
+		return nil, 0, fmt.Errorf("elasticsearch error: %s", string(body))
 	}
 
 	// Parse response
@@ -71,23 +87,21 @@ func (r *ElasticsearchStarterRepository) Search(ctx context.Context, listStarter
 	documents := hits["hits"].([]interface{})
 
 	// Convert to domain entities
-	starters := make([]*model.Starter, 0, len(documents))
+	starterIds := make([]int64, 0, len(documents))
 	for _, doc := range documents {
 		source := doc.(map[string]interface{})["_source"].(map[string]interface{})
-		starter, err := r.toDomain(source)
+		starterId, err := r.toStarterID(source)
 		if err != nil {
 			return nil, 0, err
 		}
-		starters = append(starters, starter)
+		starterIds = append(starterIds, starterId)
 	}
 
-	return starters, total, nil
+	return starterIds, total, nil
 }
 
-func (r *ElasticsearchStarterRepository) IndexStarter(ctx context.Context, starter *model.Starter) error {
+func (r *ElasticsearchStarterRepository) IndexStarter(ctx context.Context, starter *model.StarterESDoc) error {
 	doc := r.toDocument(starter)
-	doc.IndexedAt = time.Now()
-
 	// Convert to JSON
 	body, err := json.Marshal(doc)
 	if err != nil {
@@ -109,68 +123,30 @@ func (r *ElasticsearchStarterRepository) IndexStarter(ctx context.Context, start
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
-
+			// TODO: Handle error like this (search for "if err != nil")
 		}
 	}(res.Body)
-
 	if res.IsError() {
 		return fmt.Errorf("error indexing document: %s", res.String())
 	}
-
 	return nil
 }
 
 func (r *ElasticsearchStarterRepository) DeleteFromIndex(ctx context.Context, domain string) error {
-	// First, search for the document by domain to get its ID
-	query := map[string]interface{}{
-		"query": map[string]interface{}{
-			"term": map[string]interface{}{
-				"domain.keyword": domain,
-			},
-		},
-	}
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(query); err != nil {
-		return fmt.Errorf("error encoding query: %w", err)
-	}
-
-	// Delete by query
-	req := esapi.DeleteByQueryRequest{
-		Index: []string{starterIndexName},
-		Body:  &buf,
-	}
-
-	res, err := req.Do(ctx, r.client)
-	if err != nil {
-		return fmt.Errorf("error deleting document: %w", err)
-	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-
-		}
-	}(res.Body)
-
-	if res.IsError() {
-		return fmt.Errorf("error deleting document: %s", res.String())
-	}
-
+	// TODO: implement
 	return nil
 }
 
 // BulkIndex indexes multiple starters in bulk (for initial indexing or reindexing)
-func (r *ElasticsearchStarterRepository) BulkIndex(ctx context.Context, starters []*model.Starter) error {
+func (r *ElasticsearchStarterRepository) BulkIndex(ctx context.Context, starters []*model.StarterESDoc) error {
 	if len(starters) == 0 {
 		return nil
 	}
 
 	var buf bytes.Buffer
-	now := time.Now()
 
 	for _, starter := range starters {
 		doc := r.toDocument(starter)
-		doc.IndexedAt = now
 
 		// Bulk index format: action line + document line
 		meta := map[string]interface{}{
@@ -213,201 +189,76 @@ func (r *ElasticsearchStarterRepository) BulkIndex(ctx context.Context, starters
 	return nil
 }
 
-// Helper methods
-
-// toDocument converts domain Starter to Elasticsearch document
-func (r *ElasticsearchStarterRepository) toDocument(starter *model.Starter) *StarterDocument {
+// toDocument converts domain Starter to ES document
+func (r *ElasticsearchStarterRepository) toDocument(starter *model.StarterESDoc) *StarterDocument {
 	// Build full text for search
 	fullText := strings.Join([]string{
+		strconv.FormatInt(starter.ID(), 10),
 		starter.Domain(),
 		starter.Name(),
-		starter.Email(),
-		starter.Mobile(),
-		starter.JobTitle(),
+		starter.DepartmentName(),
+		starter.BusinessUnitName(),
 	}, " ")
 
+	// TODO: diff between search tokens and full text
 	// Build search tokens (for exact matching)
 	tokens := []string{
+		strconv.FormatInt(starter.ID(), 10),
 		starter.Domain(),
 		starter.Name(),
-		starter.Email(),
-		starter.Mobile(),
+		starter.DepartmentName(),
+		starter.BusinessUnitName(),
 	}
 
-	return &StarterDocument{
-		ID:            starter.ID(),
-		Domain:        starter.Domain(),
-		Name:          starter.Name(),
-		Email:         starter.Email(),
-		Mobile:        starter.Mobile(),
-		WorkPhone:     starter.WorkPhone(),
-		JobTitle:      starter.JobTitle(),
-		DepartmentID:  starter.DepartmentID(),
-		LineManagerID: starter.LineManagerID(),
-		FullText:      fullText,
-		SearchTokens:  tokens,
-		CreatedAt:     starter.CreatedAt(),
-		UpdatedAt:     starter.UpdatedAt(),
-	}
+	return NewStarterDocumentBuilder().
+		ID(starter.ID()).
+		Domain(starter.Domain()).
+		Name(starter.Name()).
+		DepartmentName(starter.DepartmentName()).
+		BusinessUnitName(starter.BusinessUnitName()).
+		FullText(fullText).
+		SearchTokens(tokens).
+		BuildPtr()
 }
 
-// toDomain converts Elasticsearch document to domain Starter
-func (r *ElasticsearchStarterRepository) toDomain(source map[string]interface{}) (*model.Starter, error) {
-	id := int64(source["id"].(float64))
-	domain := source["domain"].(string)
-
-	// Handle name field - might be nil for old documents indexed before name field was added
-	name := ""
-	if val, ok := source["name"]; ok && val != nil {
-		name = val.(string)
+// toStarterID converts ES document to domain Starter
+func (r *ElasticsearchStarterRepository) toStarterID(source map[string]interface{}) (int64, error) {
+	id, err := extractInt64(source, "id")
+	if err != nil {
+		return 0, fmt.Errorf("failed to extract id: %w", err)
 	}
 
-	email := source["email"].(string)
-	mobile := source["mobile"].(string)
-	workPhone := source["work_phone"].(string)
-	jobTitle := source["job_title"].(string)
-
-	var departmentID, lineManagerID *int64
-	if val, ok := source["department_id"]; ok && val != nil {
-		dep := int64(val.(float64))
-		departmentID = &dep
-	}
-	if val, ok := source["line_manager_id"]; ok && val != nil {
-		mgr := int64(val.(float64))
-		lineManagerID = &mgr
+	if id <= 0 {
+		return 0, fmt.Errorf("invalid id: %d", id)
 	}
 
-	createdAt, _ := time.Parse(time.RFC3339, source["created_at"].(string))
-	updatedAt, _ := time.Parse(time.RFC3339, source["updated_at"].(string))
-
-	return model.Rehydrate(
-		id,
-		domain,
-		name,
-		email,
-		mobile,
-		workPhone,
-		jobTitle,
-		departmentID,
-		lineManagerID,
-		createdAt,
-		updatedAt,
-	)
+	return id, nil
 }
 
-func (r *ElasticsearchStarterRepository) buildSearchQuery(query starterquery.ListStartersQuery) map[string]interface{} {
-	var must []interface{}
-
-	// Handle search by specific field or multi-field
-	if query.Keyword != "" {
-		if query.SearchBy != "" {
-			// Search by specific field
-			fieldName := r.mapSearchByToFieldName(query.SearchBy)
-			must = append(must, map[string]interface{}{
-				"match": map[string]interface{}{
-					fieldName: map[string]interface{}{
-						"query":     query.Keyword,
-						"fuzziness": "AUTO",
-						"operator":  "and",
-					},
-				},
-			})
-		} else {
-			// Multi-field search when SearchBy is empty
-			must = append(must, map[string]interface{}{
-				"multi_match": map[string]interface{}{
-					"query": query.Keyword,
-					"fields": []string{
-						"name^3",      // Boost name matches (highest priority)
-						"domain^3",    // Boost domain matches
-						"job_title^2", // Boost job title matches
-						"email",
-						"mobile",
-						"full_text",
-					},
-					"type":           "best_fields",
-					"fuzziness":      "AUTO",
-					"prefix_length":  2,
-					"max_expansions": 50,
-				},
-			})
-		}
+// Helper function để extract int64 từ map[string]interface{}
+func extractInt64(m map[string]interface{}, key string) (int64, error) {
+	value, exists := m[key]
+	if !exists {
+		return 0, fmt.Errorf("field %s not found", key)
 	}
 
-	// Build query structure
-	boolQuery := map[string]interface{}{}
-	if len(must) > 0 {
-		boolQuery["must"] = must
-	} else {
-		// Match all if no search criteria
-		return map[string]interface{}{
-			"query": map[string]interface{}{
-				"match_all": map[string]interface{}{},
-			},
-			"sort": r.buildSortClause(query.SortBy, query.SortOrder),
-		}
+	if value == nil {
+		return 0, fmt.Errorf("field %s is nil", key)
 	}
 
-	esQuery := map[string]interface{}{
-		"query": map[string]interface{}{
-			"bool": boolQuery,
-		},
-		"sort": r.buildSortClause(query.SortBy, query.SortOrder),
-	}
-
-	return esQuery
-}
-
-// mapSearchByToFieldName maps the SearchBy parameter to Elasticsearch field name
-func (r *ElasticsearchStarterRepository) mapSearchByToFieldName(searchBy string) string {
-	switch searchBy {
-	case "fullname":
-		return "name"
-	case "domain":
-		return "domain"
-	case "dept_name":
-		return "department_name" // Assuming you have this field in ES
-	case "bu_name":
-		return "business_unit_name" // Assuming you have this field in ES
+	// Handle multiple numeric types
+	switch v := value.(type) {
+	case float64:
+		return int64(v), nil
+	case float32:
+		return int64(v), nil
+	case int:
+		return int64(v), nil
+	case int64:
+		return v, nil
+	case int32:
+		return int64(v), nil
 	default:
-		return "full_text" // Fallback to full_text search
-	}
-}
-
-// buildSortClause builds the sort clause for Elasticsearch
-func (r *ElasticsearchStarterRepository) buildSortClause(sortBy, sortOrder string) []interface{} {
-	if sortBy == "" {
-		sortBy = "_score" // Default sort by relevance
-	}
-
-	if sortOrder == "" {
-		sortOrder = "desc"
-	}
-
-	// Map domain sort fields to ES fields
-	fieldName := r.mapSortFieldToESField(sortBy)
-
-	return []interface{}{
-		map[string]interface{}{
-			fieldName: map[string]interface{}{
-				"order": sortOrder,
-			},
-		},
-	}
-}
-
-// mapSortFieldToESField maps domain sort fields to Elasticsearch fields
-func (r *ElasticsearchStarterRepository) mapSortFieldToESField(sortBy string) string {
-	switch sortBy {
-	case "name", "fullname":
-		return "name.keyword" // Use keyword field for sorting
-	case "domain":
-		return "domain.keyword"
-	case "created_at":
-		return "created_at"
-	case "updated_at":
-		return "updated_at"
-	default:
-		return "_score"
+		return 0, fmt.Errorf("field %s is not a number, got type: %T", key, value)
 	}
 }

@@ -9,8 +9,8 @@ import (
 
 type RequestURLResolver struct{}
 
-func NewRequestURLResolver() RequestURLResolver {
-	return RequestURLResolver{}
+func NewRequestURLResolver() *RequestURLResolver {
+	return &RequestURLResolver{}
 }
 
 func (r RequestURLResolver) Scheme(c *gin.Context) string {

@@ -23,12 +23,6 @@ func (s *NotiApplicationService) ListNotifications(
 	query ListNotificationsQuery,
 ) (*httputil.PaginatedResult[*domainmodel.Notification], error) {
 	pagination := query.Pagination
-	if pagination.Page <= 0 {
-		pagination.Page = 1
-	}
-	if pagination.Limit <= 0 {
-		pagination.Limit = 20
-	}
 
 	filter := domainrepo.ListNotificationsFilter{
 		SortBy:    query.SortBy,
@@ -45,25 +39,21 @@ func (s *NotiApplicationService) ListNotifications(
 		next *string
 	)
 
-	if pagination.Page > 1 {
-		value := strconv.Itoa(pagination.Page - 1)
-		prev = &value
-	}
+	value := strconv.Itoa(pagination.GetPage() - 1)
+	prev = &value
 
 	totalPages := 0
-	if pagination.Limit > 0 {
-		totalPages = int(math.Ceil(float64(total) / float64(pagination.Limit)))
-	}
+	totalPages = int(math.Ceil(float64(total) / float64(pagination.GetLimit())))
 
-	if totalPages > 0 && pagination.Page < totalPages {
-		value := strconv.Itoa(pagination.Page + 1)
+	if totalPages > 0 && pagination.GetPage() < totalPages {
+		value := strconv.Itoa(pagination.GetPage() + 1)
 		next = &value
 	}
 
 	return &httputil.PaginatedResult[*domainmodel.Notification]{
 		Data: data,
 		Pagination: httputil.RespPagination{
-			Limit:      pagination.Limit,
+			Limit:      pagination.GetLimit(),
 			TotalItems: total,
 			Prev:       prev,
 			Next:       next,
