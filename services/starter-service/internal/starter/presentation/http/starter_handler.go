@@ -5,18 +5,22 @@ import (
 	"github.com/kiin21/go-rest/pkg/httputil"
 	"github.com/kiin21/go-rest/services/starter-service/internal/starter/application/service"
 	"github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/model"
+	domainService "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/service"
 	starterdto "github.com/kiin21/go-rest/services/starter-service/internal/starter/presentation/http/dto/starter"
 )
 
 type StarterHandler struct {
-	starterSvc *service.StarterApplicationService
+	starterSvc        *service.StarterApplicationService
+	enrichmentService *domainService.StarterEnrichmentService
 }
 
 func NewStarterHandler(
 	starterSvc *service.StarterApplicationService,
+	enrichmentService *domainService.StarterEnrichmentService,
 ) *StarterHandler {
 	return &StarterHandler{
-		starterSvc: starterSvc,
+		starterSvc:        starterSvc,
+		enrichmentService: enrichmentService,
 	}
 }
 
@@ -27,7 +31,7 @@ func (sh *StarterHandler) ListStarters(ctx *gin.Context) {
 
 func (sh *StarterHandler) listStarters(ctx *gin.Context) (res interface{}, err error) {
 	var req starterdto.ListStartersRequest
-	if err := httputil.ValidateReq(ctx, &req); err != nil {
+	if err := httputil.ValidateQuery(ctx, &req); err != nil {
 		return nil, err
 	}
 	req.SetDefaults()
@@ -37,7 +41,7 @@ func (sh *StarterHandler) listStarters(ctx *gin.Context) (res interface{}, err e
 		return nil, err
 	}
 
-	enrichedDomain, err := sh.starterSvc.EnrichStarters(ctx, rawResult.Data)
+	enrichedDomain, err := sh.enrichmentService.EnrichStarters(ctx, rawResult.Data)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +62,7 @@ func (sh *StarterHandler) CreateStarter(ctx *gin.Context) {
 
 func (sh *StarterHandler) createStarter(ctx *gin.Context) (res interface{}, err error) {
 	var req starterdto.CreateStarterRequest
-	if err := httputil.ValidateReq(ctx, &req); err != nil {
+	if err := httputil.ValidateBody(ctx, &req); err != nil {
 		return nil, err
 	}
 
@@ -67,7 +71,7 @@ func (sh *StarterHandler) createStarter(ctx *gin.Context) (res interface{}, err 
 		return nil, err
 	}
 
-	enrichedDomain, err := sh.starterSvc.EnrichStarters(ctx, []*model.Starter{starter})
+	enrichedDomain, err := sh.enrichmentService.EnrichStarters(ctx, []*model.Starter{starter})
 	if err != nil {
 		return nil, err
 	}
@@ -83,17 +87,17 @@ func (sh *StarterHandler) Find(ctx *gin.Context) {
 
 func (sh *StarterHandler) find(ctx *gin.Context) (res interface{}, err error) {
 	var uriReq struct {
-		domain string `uri:"domain" binding:"required"`
+		Domain string `uri:"domain" binding:"required"`
 	}
 	if err := httputil.ValidateURI(ctx, &uriReq); err != nil {
 		return nil, err
 	}
 
-	starter, err := sh.starterSvc.GetStarterByDomain(ctx, uriReq.domain)
+	starter, err := sh.starterSvc.GetStarterByDomain(ctx, uriReq.Domain)
 	if err != nil {
 		return nil, err
 	}
-	enrichedDomain, err := sh.starterSvc.EnrichStarters(ctx, []*model.Starter{starter})
+	enrichedDomain, err := sh.enrichmentService.EnrichStarters(ctx, []*model.Starter{starter})
 	if err != nil {
 		return nil, err
 	}
@@ -109,13 +113,13 @@ func (sh *StarterHandler) UpdateStarter(ctx *gin.Context) {
 
 func (sh *StarterHandler) updateStarter(ctx *gin.Context) (res interface{}, err error) {
 	var uriReq struct {
-		domain int64 `uri:"domain" binding:"required"`
+		Domain string `uri:"domain" binding:"required"`
 	}
 	if err := httputil.ValidateURI(ctx, &uriReq); err != nil {
 		return nil, err
 	}
 	var req starterdto.UpdateStarterRequest
-	if err := httputil.ValidateURI(ctx, &req); err != nil {
+	if err := httputil.ValidateBody(ctx, &req); err != nil {
 		return nil, err
 	}
 
@@ -123,7 +127,7 @@ func (sh *StarterHandler) updateStarter(ctx *gin.Context) (res interface{}, err 
 	if err != nil {
 		return nil, err
 	}
-	enrichedDomain, err := sh.starterSvc.EnrichStarters(ctx, []*model.Starter{starter})
+	enrichedDomain, err := sh.enrichmentService.EnrichStarters(ctx, []*model.Starter{starter})
 	if err != nil {
 		return nil, err
 	}
@@ -139,18 +143,18 @@ func (sh *StarterHandler) SoftDeleteStarter(ctx *gin.Context) {
 
 func (sh *StarterHandler) softDeleteStarter(ctx *gin.Context) (res interface{}, err error) {
 	var uriReq struct {
-		domain string `uri:"domain" binding:"required"`
+		Domain string `uri:"domain" binding:"required"`
 	}
 	if err := httputil.ValidateURI(ctx, &uriReq); err != nil {
 		return nil, err
 	}
 
-	if err := sh.starterSvc.SoftDeleteStarter(ctx, uriReq.domain); err != nil {
+	if err := sh.starterSvc.SoftDeleteStarter(ctx, uriReq.Domain); err != nil {
 		return nil, err
 	}
 
 	return gin.H{
 		"message": "Starter soft deleted successfully",
-		"domain":  uriReq.domain,
+		"domain":  uriReq.Domain,
 	}, nil
 }

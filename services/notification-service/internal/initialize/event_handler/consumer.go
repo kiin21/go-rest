@@ -18,7 +18,7 @@ func InitEventHandler(repo domainRepo.NotificationRepository) *EventHandler {
 func InitGroupConsumer(cfg config.Config, handler *EventHandler) domainMq.NotificationConsumer {
 	// 1. Setup Sarama config
 	saramaConfig := sarama.NewConfig()
-	saramaConfig.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRoundRobin
+	saramaConfig.Consumer.Group.Rebalance.Strategy = sarama.NewBalanceStrategyRoundRobin()
 	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetNewest
 	saramaConfig.Version = sarama.V2_8_0_0
 

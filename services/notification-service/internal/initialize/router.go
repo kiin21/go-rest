@@ -12,7 +12,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func InitRouter(logLevel string, requestURLResolver httputil.RequestURLResolver, handler *notihttp.NotiHandler) *gin.Engine {
+func InitRouter(logLevel string, requestURLResolver *httputil.RequestURLResolver, handler *notihttp.NotiHandler) *gin.Engine {
 	var r *gin.Engine
 	// Set the mode based on the environment
 	if logLevel == "debug" {

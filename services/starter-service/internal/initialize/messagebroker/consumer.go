@@ -23,7 +23,7 @@ func InitEventHandler(
 func InitGroupConsumer(cfg config.Config, handler *EventHandler) domainMq.StarterConsumer {
 	// 1. Setup Sarama config
 	saramaConfig := sarama.NewConfig()
-	saramaConfig.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRoundRobin
+	saramaConfig.Consumer.Group.Rebalance.Strategy = sarama.NewBalanceStrategyRoundRobin()
 	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetNewest
 	saramaConfig.Version = sarama.V2_8_0_0
 
@@ -37,8 +37,8 @@ func InitGroupConsumer(cfg config.Config, handler *EventHandler) domainMq.Starte
 		log.Fatalf("Error creating consumer group: %v", err)
 	}
 
-	// 3. Create a NotificationConsumer
-	topics := []string{cfg.KafkaTopicNotifications}
+	// 3. Create a SyncConsumer - listen to sync events topic for Elasticsearch indexing
+	topics := []string{cfg.KafkaTopicSyncEvents}
 	consumer := infraMq.NewKafkaStarterConsumer(consumerGroup, topics, handler)
 
 	// 4. Start consuming

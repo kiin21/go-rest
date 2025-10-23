@@ -25,3 +25,14 @@ func (d *NotificationDocument) ToDomain() *domainModel.Notification {
 		Timestamp:   d.Timestamp,
 	}
 }
+
+func FromDomain(n *domainModel.Notification) *NotificationDocument {
+	return &NotificationDocument{
+		ID:          n.ID,
+		FromStarter: n.FromStarter,
+		ToStarter:   n.ToStarter,
+		Message:     n.Message,
+		Type:        n.Type,
+		Timestamp:   n.Timestamp,
+	}
+}

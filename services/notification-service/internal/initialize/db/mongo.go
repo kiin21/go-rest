@@ -33,7 +33,7 @@ func InitDB(cfg *config.Config) (*mongodb.Client, error) {
 		Succeeded: func(ctx context.Context, e *event.CommandSucceededEvent) {
 			// Highlight slow queries
 			if e.Duration > time.Second {
-				logger.Printf("[SLOW QUERY] Command: %s | Duration: %v | Request ID: %d ⚠️",
+				logger.Printf("[SLOW QUERY] Command: %s | Duration: %v | Request ID: %d",
 					e.CommandName,
 					e.Duration,
 					e.RequestID,

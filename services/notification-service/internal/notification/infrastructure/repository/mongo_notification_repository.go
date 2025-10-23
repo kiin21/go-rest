@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
-	"fmt"
+	"log"
 	"strings"
 
 	"github.com/kiin21/go-rest/pkg/httputil"
@@ -16,8 +16,7 @@ import (
 )
 
 const (
-	defaultSortBy    = "timestamp"
-	defaultSortOrder = "desc"
+	defaultSortBy = "timestamp"
 )
 
 type notificationMongoRepository struct {
@@ -52,7 +51,7 @@ func (r *notificationMongoRepository) List(
 	defer func(cursor *mongo.Cursor, ctx context.Context) {
 		err := cursor.Close(ctx)
 		if err != nil {
-			fmt.Println(err)
+			log.Printf("Error closing MongoDB cursor: %v", err)
 		}
 	}(cursor, ctx)
 
@@ -81,7 +80,10 @@ func (r *notificationMongoRepository) Create(ctx context.Context, notification *
 		return errors.New("notification is nil")
 	}
 
-	if _, err := r.collection.InsertOne(ctx, notification); err != nil {
+	// Convert domain model to document with BSON tags
+	doc := document.FromDomain(notification)
+
+	if _, err := r.collection.InsertOne(ctx, doc); err != nil {
 		return err
 	}
 	return nil
@@ -102,13 +104,13 @@ func mapSortField(input string) string {
 	}
 }
 
-func mapSortOrder(input string) string {
+func mapSortOrder(input string) int {
 	switch strings.ToLower(input) {
 	case "asc":
-		return "asc"
+		return 1
 	case "desc":
-		return "desc"
+		return -1
 	default:
-		return defaultSortOrder
+		return -1 // default to descending
 	}
 }

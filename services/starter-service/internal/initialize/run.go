@@ -16,7 +16,7 @@ import (
 	persistentMySQL "github.com/kiin21/go-rest/services/starter-service/internal/starter/infrastructure/persistence/repository/mysql"
 )
 
-func Run() (*gin.Engine, string, domainMq.NotificationProducer, domainMq.StarterConsumer) {
+func Run() (*gin.Engine, string, domainMq.NotificationProducer, domainMq.SyncProducer, domainMq.StarterConsumer) {
 	// 1> Read config -> environment variables
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -46,8 +46,9 @@ func Run() (*gin.Engine, string, domainMq.NotificationProducer, domainMq.Starter
 		}
 	}
 
-	// 4> Initialize Kafka notification producer
-	producer := initBroker.InitProducer(cfg)
+	// 4> Initialize Kafka producers (2 separate topics)
+	notificationProducer := initBroker.InitNotificationProducer(cfg) // For leader assignment notifications
+	syncProducer := initBroker.InitSyncProducer(cfg)                 // For Elasticsearch sync events
 
 	// 5> Prepare shared dependencies
 	requestURLResolver := httputil.NewRequestURLResolver()
@@ -59,7 +60,7 @@ func Run() (*gin.Engine, string, domainMq.NotificationProducer, domainMq.Starter
 		starterRepo,
 		departmentRepo,
 		businessUnitRepo,
-		producer,
+		notificationProducer,
 	)
 
 	starterHandler, searchRepo, starterEnrichService := initStarter.InitStarter(
@@ -67,7 +68,7 @@ func Run() (*gin.Engine, string, domainMq.NotificationProducer, domainMq.Starter
 		departmentRepo,
 		businessUnitRepo,
 		esClient,
-		producer,
+		syncProducer,
 	)
 
 	eventHandler := initBroker.InitEventHandler(searchRepo, starterRepo, starterEnrichService)
@@ -82,5 +83,5 @@ func Run() (*gin.Engine, string, domainMq.NotificationProducer, domainMq.Starter
 		starterHandler,
 	)
 
-	return r, cfg.ServerPort, producer, consumer
+	return r, cfg.ServerPort, notificationProducer, syncProducer, consumer
 }

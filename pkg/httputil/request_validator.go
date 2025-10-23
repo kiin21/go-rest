@@ -13,7 +13,7 @@ type CustomValidator interface {
 	Validate() error
 }
 
-func ValidateReq(ctx *gin.Context, req interface{}) error {
+func ValidateBody(ctx *gin.Context, req interface{}) error {
 	// Bind JSON
 	if err := ctx.ShouldBindJSON(req); err != nil {
 		return handleValidationError(err, "Invalid request body")

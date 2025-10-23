@@ -19,7 +19,7 @@ import (
 // @description REST APIs for managing starters and organizations.
 // @BasePath /api/v1
 func main() {
-	router, port, notificationProducer, syncConsumer := initialize.Run()
+	router, port, notificationProducer, syncProducer, syncConsumer := initialize.Run()
 
 	docs.SwaggerInfo.Schemes = []string{"http", "https"}
 
@@ -70,6 +70,16 @@ func main() {
 			log.Printf("Error closing notification producer: %v", err)
 		} else {
 			log.Println("Kafka notification producer closed")
+		}
+	}
+
+	// Close sync producer
+	if syncProducer != nil {
+		log.Println("Closing Kafka sync producer...")
+		if err := syncProducer.Close(); err != nil {
+			log.Printf("Error closing sync producer: %v", err)
+		} else {
+			log.Println("Kafka sync producer closed")
 		}
 	}
 

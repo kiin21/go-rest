@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/kiin21/go-rest/pkg/events"
 	"github.com/kiin21/go-rest/pkg/httputil"
@@ -16,24 +17,23 @@ import (
 type StarterSearchService struct {
 	searchRepo    repository.StarterSearchRepository
 	repo          repository.StarterRepository
-	kafkaProducer messaging.NotificationProducer
+	syncProducer  messaging.SyncProducer
 }
 
 func NewStarterSearchService(
 	searchRepo repository.StarterSearchRepository,
 	repo repository.StarterRepository,
-	kafkaProducer messaging.NotificationProducer,
+	syncProducer messaging.SyncProducer,
 ) *StarterSearchService {
 	return &StarterSearchService{
-		searchRepo:    searchRepo,
-		repo:          repo,
-		kafkaProducer: kafkaProducer,
+		searchRepo:   searchRepo,
+		repo:         repo,
+		syncProducer: syncProducer,
 	}
 }
 
-// IndexStarter publishes a starter indexing event to Kafka (call after Create/Update)
 func (s *StarterSearchService) IndexStarter(ctx context.Context, starter *model.Starter) error {
-	if s.kafkaProducer == nil {
+	if s.syncProducer == nil {
 		return nil
 	}
 
@@ -50,7 +50,7 @@ func (s *StarterSearchService) IndexStarter(ctx context.Context, starter *model.
 		return err
 	}
 
-	if err := s.kafkaProducer.SendNotification(event); err != nil {
+	if err := s.syncProducer.SendSyncEvent(event); err != nil {
 		log.Printf("Failed to send starter index event: %v", err)
 		return err
 	}
@@ -58,9 +58,8 @@ func (s *StarterSearchService) IndexStarter(ctx context.Context, starter *model.
 	return nil
 }
 
-// DeleteFromIndex publishes a starter deletion event to Kafka (call after SoftDelete)
 func (s *StarterSearchService) DeleteFromIndex(ctx context.Context, starter *model.Starter) error {
-	if s.kafkaProducer == nil {
+	if s.syncProducer == nil {
 		return nil
 	}
 
@@ -77,7 +76,7 @@ func (s *StarterSearchService) DeleteFromIndex(ctx context.Context, starter *mod
 		return err
 	}
 
-	if err := s.kafkaProducer.SendNotification(event); err != nil {
+	if err := s.syncProducer.SendSyncEvent(event); err != nil {
 		log.Printf("Failed to send starter delete event: %v", err)
 		return err
 	}
@@ -124,25 +123,105 @@ func (s *StarterSearchService) Search(
 	}, nil
 }
 
-func (s *StarterSearchService) buildSearchQuery(*starterquery.ListStartersQuery) map[string]interface{} {
-	// TODO: implement
-	return nil
+func (s *StarterSearchService) buildSearchQuery(q *starterquery.ListStartersQuery) map[string]interface{} {
+	if q == nil {
+		return nil
+	}
+	kw := strings.TrimSpace(q.Keyword)
+	if kw == "" {
+		return nil
+	}
+
+	field := s.mapSearchByToFieldName(q.SearchBy)
+
+	var must []any
+	if field == "" {
+		must = append(must, map[string]any{
+			"multi_match": map[string]any{
+				"query": kw,
+				"type":  "bool_prefix",
+				"fields": []string{
+					"domain^3",
+					"name^2",
+					"department_name",
+					"business_unit_name",
+					"full_text",
+					"search_tokens",
+				},
+			},
+		})
+	} else if field == "domain" {
+		must = append(must, map[string]any{
+			"wildcard": map[string]any{
+				"domain": map[string]any{"value": "*" + kw + "*"},
+			},
+		})
+	} else {
+		must = append(must, map[string]any{
+			"match_phrase_prefix": map[string]any{
+				field: map[string]any{"query": kw},
+			},
+		})
+	}
+
+	es := map[string]any{
+		"query": map[string]any{
+			"bool": map[string]any{
+				"must": must,
+			},
+		},
+	}
+
+	if sort := s.buildSortClause(q.SortBy, q.SortOrder); len(sort) > 0 {
+		es["sort"] = sort
+	}
+	return es
 }
 
-// mapSearchByToFieldName maps the SearchBy parameter to Elasticsearch field name
 func (s *StarterSearchService) mapSearchByToFieldName(searchBy string) string {
-	// TODO: implement
-	return ""
+	switch strings.ToLower(strings.TrimSpace(searchBy)) {
+	case "domain":
+		return "domain"
+	case "fullname", "name":
+		return "name"
+	case "dept_name":
+		return "department_name"
+	case "bu_name":
+		return "business_unit_name"
+	default:
+		return ""
+	}
 }
 
-// buildSortClause builds the sort clause for Elasticsearch
 func (s *StarterSearchService) buildSortClause(sortBy, sortOrder string) []interface{} {
-	// TODO: implement
-	return nil
+	field := s.mapSortFieldToESField(sortBy)
+	if field == "" {
+		return nil
+	}
+	order := strings.ToLower(strings.TrimSpace(sortOrder))
+	if order != "desc" {
+		order = "asc"
+	}
+	return []interface{}{
+		map[string]interface{}{
+			field: map[string]interface{}{"order": order},
+		},
+	}
 }
 
-// mapSortFieldToESField maps domain sort fields to Elasticsearch fields
 func (s *StarterSearchService) mapSortFieldToESField(sortBy string) string {
-	// TODO: implement
-	return ""
+	switch strings.ToLower(strings.TrimSpace(sortBy)) {
+	case "id":
+		return "id"
+	case "domain":
+		return "domain"
+	case "name", "fullname":
+		return "name"
+	case "dept_name":
+		return "department_name"
+	case "bu_name":
+		return "business_unit_name"
+	default:
+		return "id"
+	}
 }

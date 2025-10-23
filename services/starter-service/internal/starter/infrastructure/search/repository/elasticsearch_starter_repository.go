@@ -29,75 +29,82 @@ func (r *ElasticsearchStarterRepository) Search(
 	listStarterQuery *starterquery.ListStartersQuery,
 	buildSearchQuery repo.SearchQueryBuilder,
 ) ([]int64, int64, error) {
-	// Build ES query using the provided builder function
+
+	// 1) Build query
 	esQuery := buildSearchQuery(listStarterQuery)
 
-	// Execute search
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(esQuery); err != nil {
-		return nil, 0, fmt.Errorf("error encoding query: %w", err)
+	// 2) Chuẩn bị body: nil nếu query = nil; hoặc match_all nếu bạn muốn luôn có object
+	var body io.Reader
+	if esQuery != nil {
+		var buf bytes.Buffer
+		if err := json.NewEncoder(&buf).Encode(esQuery); err != nil {
+			return nil, 0, fmt.Errorf("error encoding query: %w", err)
+		}
+		// nếu buf.Len()==0 → coi như nil
+		if buf.Len() > 0 {
+			body = &buf
+		}
 	}
 
-	// Extract pagination from query (type assertion)
+	if esQuery == nil {
+		return nil, 0, fmt.Errorf("Fail to search from ES with provided query")
+	}
 
+	// 3) Pagination phòng thủ
 	page, limit := 1, 10
-
-	if listStarterQuery.Pagination.Page != nil {
-		page = *listStarterQuery.Pagination.Page
+	if p := listStarterQuery.Pagination.Page; p != nil && *p > 0 {
+		page = *p
 	}
-	if listStarterQuery.Pagination.Limit != nil {
-		limit = *listStarterQuery.Pagination.Limit
+	if l := listStarterQuery.Pagination.Limit; l != nil && *l > 0 {
+		limit = *l
 	}
-
 	from := (page - 1) * limit
 
+	// 4) Gọi ES
 	res, err := r.client.Search(
 		r.client.Search.WithContext(ctx),
 		r.client.Search.WithIndex(starterIndexName),
-		r.client.Search.WithBody(&buf),
+		r.client.Search.WithBody(body), // <- có thể nil
 		r.client.Search.WithTrackTotalHits(true),
 		r.client.Search.WithFrom(from),
 		r.client.Search.WithSize(limit),
 	)
-
 	if err != nil {
 		return nil, 0, fmt.Errorf("error executing search: %w", err)
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			// TODO: Handle error like this (search for "if err != nil")
-		}
-	}(res.Body)
+	defer res.Body.Close()
 
 	if res.IsError() {
-		body, _ := io.ReadAll(res.Body)
-		return nil, 0, fmt.Errorf("elasticsearch error: %s", string(body))
+		b, _ := io.ReadAll(res.Body)
+		return nil, 0, fmt.Errorf("elasticsearch error: %s", string(b))
 	}
 
-	// Parse response
-	var result map[string]interface{}
-	if err := json.NewDecoder(res.Body).Decode(&result); err != nil {
+	// 5) Parse response có kiểu rõ ràng
+	type hitSrc struct {
+		ID int64 `json:"id"`
+		// thêm các field khác nếu cần
+	}
+	type esResp struct {
+		Hits struct {
+			Total struct {
+				Value int64 `json:"value"`
+			} `json:"total"`
+			Hits []struct {
+				Source hitSrc `json:"_source"`
+			} `json:"hits"`
+		} `json:"hits"`
+	}
+
+	var out esResp
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
 		return nil, 0, fmt.Errorf("error parsing response: %w", err)
 	}
 
-	// Extract hits
-	hits := result["hits"].(map[string]interface{})
-	total := int64(hits["total"].(map[string]interface{})["value"].(float64))
-	documents := hits["hits"].([]interface{})
-
-	// Convert to domain entities
-	starterIds := make([]int64, 0, len(documents))
-	for _, doc := range documents {
-		source := doc.(map[string]interface{})["_source"].(map[string]interface{})
-		starterId, err := r.toStarterID(source)
-		if err != nil {
-			return nil, 0, err
-		}
-		starterIds = append(starterIds, starterId)
+	ids := make([]int64, 0, len(out.Hits.Hits))
+	for _, h := range out.Hits.Hits {
+		ids = append(ids, h.Source.ID)
 	}
-
-	return starterIds, total, nil
+	return ids, out.Hits.Total.Value, nil
 }
 
 func (r *ElasticsearchStarterRepository) IndexStarter(ctx context.Context, starter *model.StarterESDoc) error {
@@ -235,7 +242,6 @@ func (r *ElasticsearchStarterRepository) toStarterID(source map[string]interface
 	return id, nil
 }
 
-// Helper function để extract int64 từ map[string]interface{}
 func extractInt64(m map[string]interface{}, key string) (int64, error) {
 	value, exists := m[key]
 	if !exists {

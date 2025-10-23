@@ -2,7 +2,6 @@ package event_handler
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/IBM/sarama"
@@ -25,8 +24,8 @@ func (h *EventHandler) Cleanup(sarama.ConsumerGroupSession) error { return nil }
 
 func (h *EventHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
-		fmt.Printf(
-			"✅ Received message from topic[%s], partition[%d], offset[%d]: %s\n",
+		log.Printf(
+			"Received message from topic[%s], partition[%d], offset[%d]: %s\n",
 			msg.Topic, msg.Partition, msg.Offset, string(msg.Value),
 		)
 
@@ -38,7 +37,7 @@ func (h *EventHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim s
 			continue
 		}
 
-		log.Printf("Processing event: Type=%s, ID=%s, Key=%s", event.Type, event.ID, event.Key)
+		log.Printf("Processing event: Type=%s, ID=%s", event.Type, event.ID)
 
 		// Get context from session
 		ctx := session.Context()

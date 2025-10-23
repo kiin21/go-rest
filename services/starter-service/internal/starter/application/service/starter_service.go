@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"strconv"
 
@@ -43,57 +44,21 @@ func (s *StarterApplicationService) ListStarters(
 	ctx context.Context,
 	query *starterquery.ListStartersQuery,
 ) (*httputil.PaginatedResult[*model.Starter], error) {
-
-	// Use Elasticsearch if a keyword is provided and Elasticsearch is enabled
+	// Use Elasticsearch if keyword exists and search service is available
 	if query.Keyword != "" && s.searchService != nil {
 		log.Println("Using Elasticsearch for search")
 		return s.searchService.Search(ctx, query)
 	}
 
-	// Use MySQL if a keyword is provided
-	// TODO: refactor
-	var (
-		starters []*model.Starter
-		total    int64
-		err      error
-	)
-	log.Printf("Using MySQL for search: keyword=%s", query.Keyword)
-	if query.Keyword != "" {
-		starters, total, err = s.starterRepo.SearchByKeyword(ctx, query)
-	} else {
-		starters, total, err = s.starterRepo.SearchByKeyword(ctx, query)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	totalPages := int(total) / query.Pagination.GetLimit()
-	if int(total)%(query.Pagination.GetLimit()) > 0 {
-		totalPages++
-	}
-
-	var prev, next *string
-	if query.Pagination.GetPage() > 1 {
-		value := strconv.Itoa(query.Pagination.GetPage() - 1)
-		prev = &value
-	}
-	if query.Pagination.GetPage() < totalPages {
-		value := strconv.Itoa(query.Pagination.GetPage() + 1)
-		next = &value
-	}
-
-	return &httputil.PaginatedResult[*model.Starter]{
-		Data: starters,
-		Pagination: httputil.RespPagination{
-			Limit:      query.Pagination.GetLimit(),
-			TotalItems: total,
-			Prev:       prev,
-			Next:       next,
-		},
-	}, nil
+	// Fallback to MySQL
+	log.Printf("Using MySQL for search: keyword=%s, by=%s", query.Keyword, query.SearchBy)
+	return s.listFromMySQL(ctx, query)
 }
 
-func (s *StarterApplicationService) CreateStarter(ctx context.Context, command *startercommand.CreateStarterCommand) (*model.Starter, error) {
+func (s *StarterApplicationService) CreateStarter(
+	ctx context.Context,
+	command *startercommand.CreateStarterCommand,
+) (*model.Starter, error) {
 	if err := s.domainService.ValidateDomainUniqueness(ctx, command.Domain); err != nil {
 		if errors.Is(err, sharedDomain.ErrDomainAlreadyExists) {
 			return nil, err
@@ -119,66 +84,27 @@ func (s *StarterApplicationService) CreateStarter(ctx context.Context, command *
 		return nil, err
 	}
 
-	if s.searchService != nil {
-		go func() {
-			if err := s.searchService.IndexStarter(context.Background(), starter); err != nil {
-				log.Printf("Failed to index starter to Elasticsearch: %v", err)
-			}
-		}()
-	}
-
+	s.asyncIndexStarter(starter)
 	return starter, nil
 }
 
-func (s *StarterApplicationService) GetStarterByDomain(ctx context.Context, domainName string) (*model.Starter, error) {
-	starter, err := s.starterRepo.FindByDomain(ctx, domainName)
-	if err != nil {
-		return nil, err
-	}
-
-	return starter, nil
+func (s *StarterApplicationService) GetStarterByDomain(
+	ctx context.Context,
+	domainName string,
+) (*model.Starter, error) {
+	return s.starterRepo.FindByDomain(ctx, domainName)
 }
 
-func (s *StarterApplicationService) UpdateStarter(ctx context.Context, command *startercommand.UpdateStarterCommand) (*model.Starter, error) {
+func (s *StarterApplicationService) UpdateStarter(
+	ctx context.Context,
+	command *startercommand.UpdateStarterCommand,
+) (*model.Starter, error) {
 	starter, err := s.starterRepo.FindByDomain(ctx, command.Domain)
 	if err != nil {
 		return nil, err
 	}
 
-	name := starter.Name()
-	if command.Name != nil {
-		name = *command.Name
-	}
-
-	email := starter.Email()
-	if command.Email != nil {
-		email = *command.Email
-	}
-
-	mobile := starter.Mobile()
-	if command.Mobile != nil {
-		mobile = *command.Mobile
-	}
-
-	workPhone := starter.WorkPhone()
-	if command.WorkPhone != nil {
-		workPhone = *command.WorkPhone
-	}
-
-	jobTitle := starter.JobTitle()
-	if command.JobTitle != nil {
-		jobTitle = *command.JobTitle
-	}
-
-	departmentID := starter.DepartmentID()
-	if command.DepartmentID != nil {
-		departmentID = command.DepartmentID
-	}
-
-	lineManagerID := starter.LineManagerID()
-	if command.LineManagerID != nil {
-		lineManagerID = command.LineManagerID
-	}
+	name, email, mobile, workPhone, jobTitle, departmentID, lineManagerID := s.applyUpdates(starter, command)
 
 	if err := starter.UpdateInfo(name, email, mobile, workPhone, jobTitle, departmentID, lineManagerID); err != nil {
 		return nil, err
@@ -188,69 +114,56 @@ func (s *StarterApplicationService) UpdateStarter(ctx context.Context, command *
 		return nil, err
 	}
 
-	if s.searchService != nil {
-		go func() {
-			if err := s.searchService.IndexStarter(context.Background(), starter); err != nil {
-				log.Printf("Failed to index starter to Elasticsearch: %v", err)
-			}
-		}()
-	}
-
+	s.asyncIndexStarter(starter)
 	return starter, nil
 }
 
-// SoftDeleteStarter soft deletes a starter by domain
-func (s *StarterApplicationService) SoftDeleteStarter(ctx context.Context, domain string) error {
-	// Soft delete from MySQL
+func (s *StarterApplicationService) SoftDeleteStarter(
+	ctx context.Context,
+	domain string,
+) error {
 	entity, err := s.starterRepo.SoftDelete(ctx, domain)
 	if err != nil {
 		return err
 	}
 
-	// Remove from Elasticsearch index (async, non-blocking)
-	if s.searchService != nil {
-		go func() {
-			if err := s.searchService.DeleteFromIndex(context.Background(), entity); err != nil {
-				log.Printf("Failed to delete starter from Elasticsearch: %v", err)
-			}
-		}()
-	}
-
+	s.asyncDeleteFromIndex(entity)
 	return nil
 }
 
-func (s *StarterApplicationService) EnrichStarters(ctx context.Context, starters []*model.Starter) (*model.EnrichedData, error) {
-	return s.enrichmentService.EnrichStarters(ctx, starters)
-}
-
 func (s *StarterApplicationService) ReindexAll(ctx context.Context) error {
-	totalIndexed := 0
-	for {
-		batchSize := 100
-		page := 1
+	const batchSize = 100
+	var totalIndexed int
 
-		emptyQuery := &starterquery.ListStartersQuery{
+	for page := 1; ; page++ {
+		query := &starterquery.ListStartersQuery{
 			Pagination: httputil.ReqPagination{
-				Page: &page, Limit: &batchSize,
+				Page:  &page,
+				Limit: func() *int { v := batchSize; return &v }(),
 			},
 		}
 
-		starters, total, err := s.starterRepo.SearchByKeyword(ctx, emptyQuery)
+		starters, total, err := s.starterRepo.SearchByKeyword(ctx, query)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to fetch starters page %d: %w", page, err)
 		}
 
-		enriched, err := s.EnrichStarters(ctx, starters)
+		if len(starters) == 0 {
+			break
+		}
+
+		enriched, err := s.enrichmentService.EnrichStarters(ctx, starters)
+		if err != nil {
+			return fmt.Errorf("failed to enrich starters batch: %w", err)
+		}
 
 		esDocs := make([]*model.StarterESDoc, len(starters))
-		for i := range starters {
-			esDoc := model.NewStarterESDocFromStarter(starters[i], enriched)
-			esDocs[i] = esDoc
+		for i, starter := range starters {
+			esDocs[i] = model.NewStarterESDocFromStarter(starter, enriched)
 		}
 
-		// Bulk index to Elasticsearch
 		if err := s.searchRepo.BulkIndex(ctx, esDocs); err != nil {
-			return err
+			return fmt.Errorf("failed to bulk index batch: %w", err)
 		}
 
 		totalIndexed += len(starters)
@@ -259,10 +172,111 @@ func (s *StarterApplicationService) ReindexAll(ctx context.Context) error {
 		if int64(totalIndexed) >= total {
 			break
 		}
-
-		page++
 	}
 
 	log.Printf("Reindexing completed: %d starters indexed", totalIndexed)
 	return nil
+}
+
+func (s *StarterApplicationService) asyncIndexStarter(starter *model.Starter) {
+	if s.searchService == nil {
+		return
+	}
+
+	go func() {
+		if err := s.searchService.IndexStarter(context.Background(), starter); err != nil {
+			log.Printf("Failed to index starter to Elasticsearch: %v", err)
+		}
+	}()
+}
+
+func (s *StarterApplicationService) asyncDeleteFromIndex(entity *model.Starter) {
+	if s.searchService == nil {
+		return
+	}
+
+	go func() {
+		if err := s.searchService.DeleteFromIndex(context.Background(), entity); err != nil {
+			log.Printf("Failed to delete starter from Elasticsearch: %v", err)
+		}
+	}()
+}
+
+func (s *StarterApplicationService) listFromMySQL(
+	ctx context.Context,
+	query *starterquery.ListStartersQuery,
+) (*httputil.PaginatedResult[*model.Starter], error) {
+	starters, total, err := s.starterRepo.SearchByKeyword(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	limit := query.Pagination.GetLimit()
+	totalPages := int(total) / limit
+	if int(total)%limit > 0 {
+		totalPages++
+	}
+
+	var prev, next *string
+	currentPage := query.Pagination.GetPage()
+	if currentPage > 1 {
+		value := strconv.Itoa(currentPage - 1)
+		prev = &value
+	}
+	if currentPage < totalPages {
+		value := strconv.Itoa(currentPage + 1)
+		next = &value
+	}
+
+	return &httputil.PaginatedResult[*model.Starter]{
+		Data: starters,
+		Pagination: httputil.RespPagination{
+			Limit:      limit,
+			TotalItems: total,
+			Prev:       prev,
+			Next:       next,
+		},
+	}, nil
+}
+
+func (s *StarterApplicationService) applyUpdates(
+	starter *model.Starter,
+	command *startercommand.UpdateStarterCommand,
+) (name, email, mobile, workPhone, jobTitle string, departmentID, lineManagerID *int64) {
+	name = starter.Name()
+	if command.Name != nil {
+		name = *command.Name
+	}
+
+	email = starter.Email()
+	if command.Email != nil {
+		email = *command.Email
+	}
+
+	mobile = starter.Mobile()
+	if command.Mobile != nil {
+		mobile = *command.Mobile
+	}
+
+	workPhone = starter.WorkPhone()
+	if command.WorkPhone != nil {
+		workPhone = *command.WorkPhone
+	}
+
+	jobTitle = starter.JobTitle()
+	if command.JobTitle != nil {
+		jobTitle = *command.JobTitle
+	}
+
+	departmentID = starter.DepartmentID()
+	if command.DepartmentID != nil {
+		departmentID = command.DepartmentID
+	}
+
+	lineManagerID = starter.LineManagerID()
+	if command.LineManagerID != nil {
+		lineManagerID = command.LineManagerID
+	}
+
+	return
 }

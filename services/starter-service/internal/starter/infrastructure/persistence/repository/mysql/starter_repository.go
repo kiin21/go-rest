@@ -57,13 +57,26 @@ func (r *StarterRepository) FindByDomain(ctx context.Context, domain string) (*m
 
 	return r.toModel(&starterEntity)
 }
-
 func (r *StarterRepository) SearchByKeyword(ctx context.Context, listStarterQuery *starterquery.ListStartersQuery) ([]*model.Starter, int64, error) {
-	query := r.db.WithContext(ctx).Model(&entity.StarterEntity{}).Where("deleted_at IS NULL")
+	query := r.db.WithContext(ctx).Model(&entity.StarterEntity{}).Where("starters.deleted_at IS NULL")
 
 	// Apply keyword search
 	if listStarterQuery.Keyword != "" && listStarterQuery.SearchBy != "" {
-		query = query.Where("? LIKE %?%", listStarterQuery.SearchBy, listStarterQuery.Keyword)
+		searchPattern := "%" + listStarterQuery.Keyword + "%"
+
+		switch listStarterQuery.SearchBy {
+		case "domain":
+			query = query.Where("starters.domain LIKE ?", searchPattern)
+		case "fullname":
+			query = query.Where("starters.name LIKE ?", searchPattern)
+		case "dept_name":
+			query = query.Joins("LEFT JOIN departments ON departments.id = starters.department_id AND departments.deleted_at IS NULL").
+				Where("departments.full_name LIKE ? OR departments.shortname LIKE ?", searchPattern, searchPattern)
+		case "bu_name":
+			query = query.Joins("LEFT JOIN departments ON departments.id = starters.department_id AND departments.deleted_at IS NULL").
+				Joins("LEFT JOIN business_units ON business_units.id = departments.business_unit_id").
+				Where("business_units.name LIKE ? OR business_units.shortname LIKE ?", searchPattern, searchPattern)
+		}
 	}
 
 	// Count total
@@ -75,11 +88,12 @@ func (r *StarterRepository) SearchByKeyword(ctx context.Context, listStarterQuer
 	query = r.applySort(query, listStarterQuery.SortBy, listStarterQuery.SortOrder)
 
 	// Apply pagination
-	offset := (*listStarterQuery.Pagination.Page - 1) * *listStarterQuery.Pagination.Limit
-	query = query.Offset(offset).Limit(*listStarterQuery.Pagination.Limit)
+	offset := listStarterQuery.Pagination.GetOffset()
+	limit := listStarterQuery.Pagination.GetLimit()
+	query = query.Offset(offset).Limit(limit)
 
 	var models []entity.StarterEntity
-	if err := query.Find(&models).Error; err != nil {
+	if err := query.Select("starters.*").Find(&models).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -96,45 +110,46 @@ func (r *StarterRepository) SearchByKeyword(ctx context.Context, listStarterQuer
 }
 
 func (r *StarterRepository) Create(ctx context.Context, starter *model.Starter) error {
-	domainAggregate := r.toEntity(starter)
-	return r.db.WithContext(ctx).Create(domainAggregate).Error
+	starterEntity := r.toEntity(starter)
+	return r.db.WithContext(ctx).Create(starterEntity).Error
 }
 
 func (r *StarterRepository) Update(ctx context.Context, starter *model.Starter) error {
-	domainAggregate := r.toEntity(starter)
-	return r.db.WithContext(ctx).Save(domainAggregate).Error
+	starterEntity := r.toEntity(starter)
+	return r.db.WithContext(ctx).Save(starterEntity).Error
 }
 
 func (r *StarterRepository) SoftDelete(ctx context.Context, domain string) (*model.Starter, error) {
 	var starterEntity entity.StarterEntity
 
-	now := time.Now()
-	err := r.db.WithContext(ctx).Model(&entity.StarterEntity{}).
+	err := r.db.WithContext(ctx).
 		Where("domain = ? AND deleted_at IS NULL", domain).
-		Update("deleted_at", now).First(&starterEntity).Error
+		First(&starterEntity).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, sharedDomain.ErrNotFound
+		}
+		return nil, err
+	}
+
+	now := time.Now()
+	err = r.db.WithContext(ctx).
+		Model(&starterEntity).
+		Update("deleted_at", now).Error
 
 	if err != nil {
 		return nil, err
 	}
 
+	starterEntity.DeletedAt = &now
+
 	return r.toModel(&starterEntity)
 }
 
 // Helper methods for domain conversion
-func (r *StarterRepository) toModel(sm *entity.StarterEntity) (*model.Starter, error) {
-	return model.Rehydrate(
-		sm.ID,
-		sm.Domain,
-		sm.Name,
-		sm.Email,
-		sm.Mobile,
-		sm.WorkPhone,
-		sm.JobTitle,
-		sm.DepartmentID,
-		sm.LineManagerID,
-		sm.CreatedAt,
-		sm.UpdatedAt,
-	)
+func (r *StarterRepository) toModel(e *entity.StarterEntity) (*model.Starter, error) {
+	return model.Rehydrate(e.ID, e.Domain, e.Name, e.Email, e.Mobile, e.WorkPhone, e.JobTitle, e.DepartmentID, e.LineManagerID, e.CreatedAt, e.UpdatedAt)
 }
 
 func (r *StarterRepository) toEntity(starter *model.Starter) *entity.StarterEntity {

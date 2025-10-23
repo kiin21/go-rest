@@ -26,13 +26,10 @@ type Config struct {
 	KafkaTopicNotifications string `mapstructure:"KAFKA_TOPIC_NOTIFICATIONS"`
 	KafkaConsumerGroup      string `mapstructure:"KAFKA_CONSUMER_GROUP"`
 
-	// DBDriver      string `mapstructure:"DB_DRIVER"`
-	// AppVersion    string `mapstructure:"APP_VERSION"`
-	// ServerAddress string `mapstructure:"SERVER_ADDRESS"`
 }
 
 func LoadConfig() (config Config, err error) {
-	viper.SetConfigFile(".env_local")
+	viper.SetConfigFile(".env_dev")
 	viper.SetConfigType("env")
 
 	viper.AutomaticEnv()

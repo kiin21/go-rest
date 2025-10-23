@@ -28,7 +28,7 @@ func (h *OrganizationHandler) ListDepartments(ctx *gin.Context) {
 func (h *OrganizationHandler) listDepartments(ctx *gin.Context) (res interface{}, err error) {
 	var req departmentdto.ListDepartmentsRequest
 
-	if err := httputil.ValidateReq(ctx, &req); err != nil {
+	if err := httputil.ValidateQuery(ctx, &req); err != nil {
 		return nil, err
 	}
 	req.SetDefaults()
@@ -46,20 +46,19 @@ func (h *OrganizationHandler) listDepartments(ctx *gin.Context) (res interface{}
 	}, nil
 }
 
-// GetDepartmentDetail GET /api/v1/organization/departments/:id
 func (h *OrganizationHandler) GetDepartmentDetail(ctx *gin.Context) {
 	httputil.Wrap(h.getDepartmentDetail)(ctx)
 }
 
 func (h *OrganizationHandler) getDepartmentDetail(ctx *gin.Context) (res interface{}, err error) {
 	var uriReq struct {
-		id int64 `uri:"id" binding:"required,min=1"`
+		ID int64 `uri:"id" binding:"required,min=1"`
 	}
 	if err := httputil.ValidateURI(ctx, &uriReq); err != nil {
 		return nil, err
 	}
 
-	result, err := h.orgSvc.GetOneDepartment(ctx, uriReq.id)
+	result, err := h.orgSvc.GetOneDepartment(ctx, uriReq.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +66,6 @@ func (h *OrganizationHandler) getDepartmentDetail(ctx *gin.Context) (res interfa
 	return departmentdto.FromDomainWithDetails(result), nil
 }
 
-// ListBusinessUnits GET /api/v1/organization/business-units
 func (h *OrganizationHandler) ListBusinessUnits(ctx *gin.Context) {
 	httputil.Wrap(h.listBusinessUnits)(ctx)
 }
@@ -75,7 +73,7 @@ func (h *OrganizationHandler) ListBusinessUnits(ctx *gin.Context) {
 func (h *OrganizationHandler) listBusinessUnits(ctx *gin.Context) (res interface{}, err error) {
 	var req budto.ListBusinessUnitsRequest
 
-	if err := httputil.ValidateReq(ctx, &req); err != nil {
+	if err := httputil.ValidateQuery(ctx, &req); err != nil {
 		return nil, err
 	}
 	req.SetDefaults()
@@ -94,7 +92,6 @@ func (h *OrganizationHandler) listBusinessUnits(ctx *gin.Context) (res interface
 	}, nil
 }
 
-// GetBusinessUnit GET /api/v1/organization/business-units/:id
 func (h *OrganizationHandler) GetBusinessUnit(ctx *gin.Context) {
 	httputil.Wrap(h.getBusinessUnit)(ctx)
 }
@@ -122,7 +119,7 @@ func (h *OrganizationHandler) CreateDepartment(ctx *gin.Context) {
 
 func (h *OrganizationHandler) createDepartment(ctx *gin.Context) (res interface{}, err error) {
 	var req departmentdto.CreateDepartmentRequest
-	if err := httputil.ValidateReq(ctx, &req); err != nil {
+	if err := httputil.ValidateBody(ctx, &req); err != nil {
 		return nil, err
 	}
 
@@ -134,24 +131,23 @@ func (h *OrganizationHandler) createDepartment(ctx *gin.Context) (res interface{
 	return departmentdto.FromDomainWithDetails(result), nil
 }
 
-// UpdateDepartment PATCH /api/v1/organization/departments/:id
 func (h *OrganizationHandler) UpdateDepartment(ctx *gin.Context) {
 	httputil.Wrap(h.updateDepartment)(ctx)
 }
 
 func (h *OrganizationHandler) updateDepartment(ctx *gin.Context) (res interface{}, err error) {
 	var uriReq struct {
-		deptId int64 `uri:"id" binding:"required,min=1"`
+		DeptId int64 `uri:"id" binding:"required,min=1"`
 	}
 	if err := httputil.ValidateURI(ctx, &uriReq); err != nil {
 		return nil, err
 	}
 	var req departmentdto.UpdateDepartmentRequest
-	if err := httputil.ValidateReq(ctx, &req); err != nil {
+	if err := httputil.ValidateBody(ctx, &req); err != nil {
 		return nil, err
 	}
 
-	result, err := h.orgSvc.UpdateDepartment(ctx, req.ToCommand(uriReq.deptId))
+	result, err := h.orgSvc.UpdateDepartment(ctx, req.ToCommand(uriReq.DeptId))
 	if err != nil {
 		return nil, err
 	}
@@ -159,24 +155,23 @@ func (h *OrganizationHandler) updateDepartment(ctx *gin.Context) (res interface{
 	return departmentdto.FromDomainWithDetails(result), nil
 }
 
-// AssignLeaderToDepartment PATCH /api/v1/organization/departments/:id/leader
 func (h *OrganizationHandler) AssignLeaderToDepartment(ctx *gin.Context) {
 	httputil.Wrap(h.assignLeaderToDepartment)(ctx)
 }
 
 func (h *OrganizationHandler) assignLeaderToDepartment(ctx *gin.Context) (res interface{}, err error) {
 	var uriReq struct {
-		deptId int64 `uri:"id" binding:"required,min=1"`
+		DeptId int64 `uri:"id" binding:"required,min=1"`
 	}
 	if err := httputil.ValidateURI(ctx, &uriReq); err != nil {
 		return nil, err
 	}
 	var req departmentdto.AssignLeaderRequest
-	if err := httputil.ValidateReq(ctx, &req); err != nil {
+	if err := httputil.ValidateBody(ctx, &req); err != nil {
 		return nil, err
 	}
 
-	result, err := h.orgSvc.AssignLeader(ctx, req.ToCommand(uriReq.deptId))
+	result, err := h.orgSvc.AssignLeader(ctx, req.ToCommand(uriReq.DeptId))
 	if err != nil {
 		return nil, err
 	}

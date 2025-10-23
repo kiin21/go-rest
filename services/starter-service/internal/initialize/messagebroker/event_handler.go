@@ -1,13 +1,12 @@
 package messagebroker
 
 import (
+	"context"
 	"fmt"
 	"log"
 
 	"github.com/IBM/sarama"
 	"github.com/kiin21/go-rest/pkg/events"
-	"github.com/kiin21/go-rest/pkg/httputil"
-	starterquery "github.com/kiin21/go-rest/services/starter-service/internal/starter/application/dto/starter/query"
 	"github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/model"
 	domainRepo "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/repository"
 	domainService "github.com/kiin21/go-rest/services/starter-service/internal/starter/domain/service"
@@ -50,50 +49,25 @@ func (h *EventHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim s
 
 		var payload events.IndexStarterPayload
 		if err := event.UnmarshalPayload(&payload); err != nil {
-			return fmt.Errorf("failed to unmarshal payload: %w", err)
+			return fmt.Errorf("failed to unmarshal IndexStarterPayload: %w", err)
 		}
 
 		// TODO: switch to handle base on event type
-		batchSize := 100
-		page := 1
-
-		emptyQuery := starterquery.ListStartersQuery{
-			Pagination: httputil.ReqPagination{
-				Page: &page, Limit: &batchSize,
-			},
-			Keyword:  payload.Domain,
-			SearchBy: "domain",
-		}
-
-		starters, _, err := h.starterRepo.SearchByKeyword(ctx, &emptyQuery)
-
-		if err != nil {
-			return err
-		}
-
-		enriched, err := h.enrichmentService.EnrichStarters(ctx, starters)
-
-		esDocs := make([]*model.StarterESDoc, len(starters))
-		for i := range starters {
-			esDoc := model.NewStarterESDocFromStarter(starters[i], enriched)
-			esDocs[i] = esDoc
-		}
-		if err != nil {
-			log.Printf("Failed to create starter: %v from message", err)
-			return err
-		}
 
 		switch event.Type {
 		case events.EventTypeStarterInsert, events.EventTypeStarterUpdate:
-			err := h.starterSearchRepo.IndexStarter(ctx, esDocs[0])
-			if err != nil {
-				return err
+			{
+				esDocs, err := h.fetchAndEnrichStarter(ctx, payload.Domain)
+				if err != nil {
+					return fmt.Errorf("failed to fetch and enrich starter: %w", err)
+				}
+				return h.starterSearchRepo.IndexStarter(ctx, esDocs)
 			}
 		case events.EventTypeStarterDelete:
-			err := h.starterSearchRepo.DeleteFromIndex(ctx, starters[0].Domain())
-			if err != nil {
-				return err
+			{
+				return h.starterSearchRepo.DeleteFromIndex(ctx, payload.Domain)
 			}
+
 		default:
 			log.Printf("Unknown event type: %s", event.Type)
 		}
@@ -101,4 +75,44 @@ func (h *EventHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim s
 		session.MarkMessage(msg, "")
 	}
 	return nil
+}
+
+func (h *EventHandler) fetchAndEnrichStarter(
+	ctx context.Context,
+	domain string,
+) (*model.StarterESDoc, error) {
+	// Fetch starter from MySQL
+	starter, err := h.starterRepo.FindByDomain(ctx, domain)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch starter from MySQL: %w", err)
+	}
+
+	// Enrich single starter
+	enriched, err := h.enrichmentService.EnrichStarters(ctx, []*model.Starter{starter})
+	if err != nil {
+		return nil, fmt.Errorf("failed to enrich starter: %w", err)
+	}
+
+	// Convert to ES document
+	esDoc := model.NewStarterESDocFromStarter(starter, enriched)
+	return esDoc, nil
+}
+
+func (h *EventHandler) enrichStartersToESDocs(
+	ctx context.Context,
+	starters []*model.Starter,
+) ([]*model.StarterESDoc, error) {
+	// Enrich all starters in batch
+	enriched, err := h.enrichmentService.EnrichStarters(ctx, starters)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to ES documents
+	esDocs := make([]*model.StarterESDoc, len(starters))
+	for i := range starters {
+		esDocs[i] = model.NewStarterESDocFromStarter(starters[i], enriched)
+	}
+
+	return esDocs, nil
 }

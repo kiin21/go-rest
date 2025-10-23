@@ -14,41 +14,156 @@ type DepartmentRepository struct {
 	db *gorm.DB
 }
 
+func (r *DepartmentRepository) SearchByKeyword(ctx context.Context, keyword string) ([]*model.Department, int64, error) {
+	var entities []entity.DepartmentEntity
+	var total int64
+
+	// Build base query
+	baseQuery := r.db.WithContext(ctx).
+		Model(&entity.DepartmentEntity{}).
+		Where("deleted_at IS NULL")
+
+	// Add keyword search if provided
+	if keyword != "" {
+		searchPattern := "%" + keyword + "%"
+		baseQuery = baseQuery.Where(
+			"full_name LIKE ? OR shortname LIKE ?",
+			searchPattern,
+			searchPattern,
+		)
+	}
+
+	// Get total count
+	if err := baseQuery.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated results
+	if err := baseQuery.
+		Find(&entities).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return r.entitiesToModels(entities), total, nil
+}
+
 func NewDepartmentRepository(db *gorm.DB) repo.DepartmentRepository {
 	return &DepartmentRepository{db: db}
 }
+
+// ============================================================================
+// Public Methods
+// ============================================================================
 
 func (r *DepartmentRepository) FindByIDs(ctx context.Context, ids []int64) ([]*model.Department, error) {
 	if len(ids) == 0 {
 		return []*model.Department{}, nil
 	}
+
 	var entities []entity.DepartmentEntity
 	if err := r.db.WithContext(ctx).
 		Where("id IN ? AND deleted_at IS NULL", ids).
 		Find(&entities).Error; err != nil {
 		return nil, err
 	}
-	result := make([]*model.Department, len(entities))
-	for i, e := range entities {
-		result[i] = r.toModel(&e)
-	}
-	return result, nil
+
+	return r.entitiesToModels(entities), nil
 }
 
-func (r *DepartmentRepository) ListWithDetails(ctx context.Context, filter *model.DepartmentListFilter, pg *httputil.ReqPagination) ([]*model.DepartmentWithDetails, int64, error) {
-	// View struct
-	type DeptWithCounts struct {
-		ID                int64  `gorm:"column:id"`
-		FullName          string `gorm:"column:full_name"`
-		Shortname         string `gorm:"column:shortname"`
-		LeaderID          *int64 `gorm:"column:leader_id"`
-		GroupDepartmentID *int64 `gorm:"column:group_department_id"`
-		BusinessUnitID    *int64 `gorm:"column:business_unit_id"`
-		CreatedAt         string `gorm:"column:created_at"`
-		UpdatedAt         string `gorm:"column:updated_at"`
+func (r *DepartmentRepository) ListWithDetails(
+	ctx context.Context,
+	filter *model.DepartmentListFilter,
+	pg *httputil.ReqPagination,
+) ([]*model.DepartmentWithDetails, int64, error) {
+	// Fetch main data with count
+	viewResults, total, err := r.fetchDepartmentsWithCounts(ctx, filter, pg)
+	if err != nil {
+		return nil, 0, err
+	}
+	// Extract related IDs
+	relatedIDs := r.extractRelatedIDsFromCounts(viewResults)
+	// Fetch related data
+	relatedData := r.fetchRelatedData(ctx, relatedIDs)
+	// Build results
+	results := r.buildDepartmentDetailsFromCounts(viewResults, relatedData)
+
+	return results, total, nil
+}
+
+func (r *DepartmentRepository) FindByIDsWithDetails(
+	ctx context.Context,
+	ids []int64,
+) ([]*model.DepartmentWithDetails, error) {
+	if len(ids) == 0 {
+		return []*model.DepartmentWithDetails{}, nil
 	}
 
-	var departmentWithCounts []DeptWithCounts
+	// Fetch main data
+	viewResults, err := r.fetchDepartmentViewResults(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	// Extract related IDs
+	relatedIDs := r.extractRelatedIDs(viewResults)
+	// Fetch related data
+	relatedData := r.fetchRelatedData(ctx, relatedIDs)
+	// Build and preserve original order
+	return r.buildDepartmentDetailsPreserveOrder(ids, viewResults, relatedData), nil
+}
+
+func (r *DepartmentRepository) Create(ctx context.Context, department *model.Department) error {
+	newEntity := &entity.DepartmentEntity{
+		GroupDepartmentID: department.GroupDepartmentID,
+		FullName:          department.FullName,
+		Shortname:         department.Shortname,
+		BusinessUnitID:    department.BusinessUnitID,
+		LeaderID:          department.LeaderID,
+	}
+
+	return r.db.WithContext(ctx).Create(newEntity).Error
+}
+
+func (r *DepartmentRepository) Update(ctx context.Context, department *model.Department) error {
+	deptEntity := &entity.DepartmentEntity{
+		ID:                department.ID,
+		GroupDepartmentID: department.GroupDepartmentID,
+		FullName:          department.FullName,
+		Shortname:         department.Shortname,
+		BusinessUnitID:    department.BusinessUnitID,
+		LeaderID:          department.LeaderID,
+	}
+
+	return r.db.WithContext(ctx).
+		Where("id = ? AND deleted_at IS NULL", department.ID).
+		Updates(deptEntity).
+		Error
+}
+
+func (r *DepartmentRepository) Delete(ctx context.Context, id int64) error {
+	return r.db.WithContext(ctx).Exec("CALL sp_delete_department(?)", id).Error
+}
+
+// ============================================================================
+// Fetch
+// ============================================================================
+
+type deptWithCounts struct {
+	ID                int64  `gorm:"column:id"`
+	FullName          string `gorm:"column:full_name"`
+	Shortname         string `gorm:"column:shortname"`
+	LeaderID          *int64 `gorm:"column:leader_id"`
+	GroupDepartmentID *int64 `gorm:"column:group_department_id"`
+	BusinessUnitID    *int64 `gorm:"column:business_unit_id"`
+	CreatedAt         string `gorm:"column:created_at"`
+	UpdatedAt         string `gorm:"column:updated_at"`
+}
+
+func (r *DepartmentRepository) fetchDepartmentsWithCounts(
+	ctx context.Context,
+	filter *model.DepartmentListFilter,
+	pg *httputil.ReqPagination,
+) ([]deptWithCounts, int64, error) {
+	var results []deptWithCounts
 	var total int64
 
 	baseQuery := r.db.WithContext(ctx).
@@ -63,280 +178,349 @@ func (r *DepartmentRepository) ListWithDetails(ctx context.Context, filter *mode
 		return nil, 0, err
 	}
 
-	// Main query with pagination
-	if err := baseQuery.Offset(pg.GetOffset()).Limit(pg.GetLimit()).Find(&departmentWithCounts).Error; err != nil {
+	if err := baseQuery.
+		Offset(pg.GetOffset()).
+		Limit(pg.GetLimit()).
+		Find(&results).Error; err != nil {
 		return nil, 0, err
-	}
-
-	leaderIDs := make(map[int64]bool)
-	businessUnitIDs := make(map[int64]bool)
-	parentDeptIDs := make(map[int64]bool)
-	deptIDs := make([]int64, len(departmentWithCounts))
-
-	for i, d := range departmentWithCounts {
-		deptIDs[i] = d.ID
-		if d.LeaderID != nil {
-			leaderIDs[*d.LeaderID] = true
-		}
-		if d.BusinessUnitID != nil {
-			businessUnitIDs[*d.BusinessUnitID] = true
-		}
-		if d.GroupDepartmentID != nil {
-			parentDeptIDs[*d.GroupDepartmentID] = true
-		}
-	}
-
-	// Batch load leaders
-	leaderMapById := make(map[int64]*model.LineManagerNested)
-	if len(leaderIDs) > 0 {
-		var leaders []model.LineManagerNested
-		leaderIDList := idsToSlice(leaderIDs)
-
-		err := r.db.WithContext(ctx).Table("starters").
-			Select("id, domain, name, email, job_title").
-			Where("id IN ? AND deleted_at IS NULL", leaderIDList).
-			Find(&leaders).Error
-
-		if err == nil {
-			for i := range leaders {
-				leaderMapById[leaders[i].ID] = &leaders[i]
-			}
-		}
-	}
-
-	// Batch load business units
-	buMapById := make(map[int64]*model.BusinessUnit)
-	if len(businessUnitIDs) > 0 {
-		var businessUnitEntities []entity.BusinessUnitEntity
-		buIDList := idsToSlice(businessUnitIDs)
-
-		err := r.db.WithContext(ctx).
-			Where("id IN ?", buIDList).
-			Find(&businessUnitEntities).Error
-		if err == nil {
-			for i := range businessUnitEntities {
-				buMapById[businessUnitEntities[i].ID] = &model.BusinessUnit{
-					ID:        businessUnitEntities[i].ID,
-					Name:      businessUnitEntities[i].Name,
-					Shortname: businessUnitEntities[i].Shortname,
-					CompanyID: businessUnitEntities[i].CompanyID,
-					LeaderID:  businessUnitEntities[i].LeaderID,
-					CreatedAt: businessUnitEntities[i].CreatedAt,
-					UpdatedAt: businessUnitEntities[i].UpdatedAt,
-				}
-			}
-		}
-	}
-
-	// Batch load parent departments
-	parentDeptMap := make(map[int64]*model.OrgDepartmentNested)
-	if len(parentDeptIDs) > 0 {
-		var parents []model.OrgDepartmentNested
-		parentIDList := idsToSlice(parentDeptIDs)
-
-		err := r.db.WithContext(ctx).Table("v_departments_with_counts").
-			Select("id, full_name, shortname").
-			Where("id IN ?", parentIDList).
-			Find(&parents).Error
-
-		if err == nil {
-			for i := range parents {
-				parentDeptMap[parents[i].ID] = &parents[i]
-			}
-		}
-	}
-
-	subDepartmentMap := make(map[int64][]*model.OrgDepartmentNested)
-	if len(deptIDs) > 0 {
-		type SubDepartment struct {
-			ID                int64  `gorm:"column:id"`
-			GroupDepartmentID int64  `gorm:"column:group_department_id"`
-			FullName          string `gorm:"column:full_name"`
-			Shortname         string `gorm:"column:shortname"`
-		}
-
-		var subDepartments []SubDepartment
-
-		if err := r.db.WithContext(ctx).Table("departments").
-			Select("id, group_department_id, full_name, shortname").
-			Where("group_department_id IN ? AND deleted_at IS NULL", deptIDs).
-			Find(&subDepartments).Error; err == nil {
-			for _, sd := range subDepartments {
-				subDepartmentMap[sd.GroupDepartmentID] = append(subDepartmentMap[sd.GroupDepartmentID], &model.OrgDepartmentNested{
-					ID:        sd.ID,
-					FullName:  sd.FullName,
-					Shortname: sd.Shortname,
-				})
-			}
-		}
-	}
-
-	results := make([]*model.DepartmentWithDetails, len(departmentWithCounts))
-	for i, d := range departmentWithCounts {
-		dept := &model.Department{
-			ID:                d.ID,
-			GroupDepartmentID: d.GroupDepartmentID,
-			FullName:          d.FullName,
-			Shortname:         d.Shortname,
-			BusinessUnitID:    d.BusinessUnitID,
-			LeaderID:          d.LeaderID,
-		}
-
-		details := &model.DepartmentWithDetails{
-			Department:     dept,
-			Subdepartments: subDepartmentMap[d.ID],
-		}
-
-		if d.BusinessUnitID != nil {
-			details.BusinessUnit = buMapById[*d.BusinessUnitID]
-		}
-
-		if d.LeaderID != nil {
-			details.Leader = leaderMapById[*d.LeaderID]
-		}
-
-		if d.GroupDepartmentID != nil {
-			details.ParentDepartment = parentDeptMap[*d.GroupDepartmentID]
-		}
-
-		results[i] = details
 	}
 
 	return results, total, nil
 }
 
-func (r *DepartmentRepository) FindByIDsWithDetails(
-	ctx context.Context,
-	ids []int64,
-) ([]*model.DepartmentWithDetails, error) {
-	if len(ids) == 0 {
-		return []*model.DepartmentWithDetails{}, nil
-	}
+type departmentViewResult struct {
+	ID                int64  `gorm:"column:id"`
+	FullName          string `gorm:"column:full_name"`
+	Shortname         string `gorm:"column:shortname"`
+	GroupDepartmentID *int64 `gorm:"column:group_department_id"`
+	BusinessUnitID    *int64 `gorm:"column:business_unit_id"`
+	LeaderID          *int64 `gorm:"column:leader_id"`
+	CreatedAt         string `gorm:"column:created_at"`
+	UpdatedAt         string `gorm:"column:updated_at"`
+}
 
-	// View struct
-	type ViewResult struct {
-		ID                int64  `gorm:"column:id"`
-		FullName          string `gorm:"column:full_name"`
-		Shortname         string `gorm:"column:shortname"`
-		GroupDepartmentID *int64 `gorm:"column:group_department_id"`
-		BusinessUnitID    *int64 `gorm:"column:business_unit_id"`
-		LeaderID          *int64 `gorm:"column:leader_id"`
-		CreatedAt         string `gorm:"column:created_at"`
-		UpdatedAt         string `gorm:"column:updated_at"`
-	}
-	var viewResults []ViewResult
+func (r *DepartmentRepository) fetchDepartmentViewResults(ctx context.Context, ids []int64) ([]departmentViewResult, error) {
+	var results []departmentViewResult
 
 	if err := r.db.WithContext(ctx).
 		Table("v_departments_with_bu").
 		Where("id IN ? AND deleted_at IS NULL", ids).
-		Find(&viewResults).Error; err != nil {
+		Find(&results).Error; err != nil {
 		return nil, err
 	}
 
-	// Collect group_department_id, business_unit_id, leader_id
-	groupDeptIDs := make(map[int64]bool)
-	buIDs := make(map[int64]bool)
-	leaderIDs := make(map[int64]bool)
+	return results, nil
+}
 
-	deptIDs := make([]int64, len(viewResults))
-	for i, vr := range viewResults {
-		deptIDs[i] = vr.ID
-		if vr.GroupDepartmentID != nil {
-			groupDeptIDs[*vr.GroupDepartmentID] = true
-		}
-		if vr.BusinessUnitID != nil {
-			buIDs[*vr.BusinessUnitID] = true
-		}
-		if vr.LeaderID != nil {
-			leaderIDs[*vr.LeaderID] = true
-		}
+// ============================================================================
+// Extract Related IDs
+// ============================================================================
+
+type relatedIDs struct {
+	deptIDs      []int64
+	groupDeptIDs []int64
+	buIDs        []int64
+	leaderIDs    []int64
+}
+
+type idMapper struct {
+	deptIDs      []int64
+	groupDeptIDs map[int64]bool
+	buIDs        map[int64]bool
+	leaderIDs    map[int64]bool
+}
+
+func newIDMapper(capacity int) *idMapper {
+	return &idMapper{
+		deptIDs:      make([]int64, 0, capacity),
+		groupDeptIDs: make(map[int64]bool),
+		buIDs:        make(map[int64]bool),
+		leaderIDs:    make(map[int64]bool),
+	}
+}
+
+func (e *idMapper) add(deptID int64, groupDeptID, buID, leaderID *int64) {
+	e.deptIDs = append(e.deptIDs, deptID)
+
+	if groupDeptID != nil {
+		e.groupDeptIDs[*groupDeptID] = true
 	}
 
-	groupDeptMapByDeptId := make(map[int64]*model.Department)
-	if len(groupDeptIDs) > 0 {
-		var entities []entity.DepartmentEntity
-		gdIDs := idsToSlice(groupDeptIDs)
-
-		if err := r.db.WithContext(ctx).
-			Where("id IN ? AND deleted_at IS NULL", gdIDs).
-			Find(&entities).Error; err == nil {
-			for _, gd := range entities {
-				groupDeptMapByDeptId[gd.ID] = r.toModel(&gd)
-			}
-		}
+	if buID != nil {
+		e.buIDs[*buID] = true
 	}
 
-	buMapByBuId := make(map[int64]*model.BusinessUnit)
-	if len(buIDs) > 0 {
-		var businessUnitEntities []entity.BusinessUnitEntity
-		buIDList := idsToSlice(buIDs)
-
-		if err := r.db.WithContext(ctx).
-			Where("id IN ?", buIDList).
-			Find(&businessUnitEntities).Error; err == nil {
-			for _, bu := range businessUnitEntities {
-				buMapByBuId[bu.ID] = &model.BusinessUnit{
-					ID:        bu.ID,
-					Name:      bu.Name,
-					Shortname: bu.Shortname,
-				}
-			}
-		}
+	if leaderID != nil {
+		e.leaderIDs[*leaderID] = true
 	}
+}
 
-	leaderMapByLeaderId := make(map[int64]*model.LineManagerNested)
-	if len(leaderIDs) > 0 {
-		var entities []entity.StarterEntity
-		leaderIDList := idsToSlice(leaderIDs)
-
-		if err := r.db.WithContext(ctx).
-			Where("id IN ?", leaderIDList).
-			Find(&entities).Error; err == nil {
-			for _, l := range entities {
-				leaderMapByLeaderId[l.ID] = &model.LineManagerNested{
-					ID:       l.ID,
-					Domain:   l.Domain,
-					Name:     l.Name,
-					Email:    l.Email,
-					JobTitle: l.JobTitle,
-				}
-			}
-		}
+func (e *idMapper) build() relatedIDs {
+	return relatedIDs{
+		deptIDs:      e.deptIDs,
+		groupDeptIDs: mapKeysToSlice(e.groupDeptIDs),
+		buIDs:        mapKeysToSlice(e.buIDs),
+		leaderIDs:    mapKeysToSlice(e.leaderIDs),
 	}
+}
 
-	subDeptMap := make(map[int64][]*model.OrgDepartmentNested)
-	if len(deptIDs) > 0 {
-		type subDeptRow struct {
-			ID                int64  `gorm:"column:id"`
-			GroupDepartmentID *int64 `gorm:"column:group_department_id"`
-			FullName          string `gorm:"column:full_name"`
-			Shortname         string `gorm:"column:shortname"`
-		}
+func (r *DepartmentRepository) extractRelatedIDs(
+	viewResults []departmentViewResult,
+) relatedIDs {
+	mapper := newIDMapper(len(viewResults))
 
-		var subDeptRows []subDeptRow
-
-		if err := r.db.WithContext(ctx).
-			Table("departments").
-			Select("id, group_department_id, full_name, shortname").
-			Where("group_department_id IN ? AND deleted_at IS NULL", deptIDs).
-			Find(&subDeptRows).Error; err == nil {
-			for _, row := range subDeptRows {
-				if row.GroupDepartmentID == nil {
-					continue
-				}
-
-				subDeptMap[*row.GroupDepartmentID] = append(subDeptMap[*row.GroupDepartmentID], &model.OrgDepartmentNested{
-					ID:        row.ID,
-					FullName:  row.FullName,
-					Shortname: row.Shortname,
-				})
-			}
-		}
-	}
-
-	resultMap := make(map[int64]*model.DepartmentWithDetails)
 	for _, vr := range viewResults {
-		rel := &model.DepartmentWithDetails{
+		mapper.add(vr.ID, vr.GroupDepartmentID, vr.BusinessUnitID, vr.LeaderID)
+	}
+
+	return mapper.build()
+}
+
+func (r *DepartmentRepository) extractRelatedIDsFromCounts(
+	counts []deptWithCounts,
+) relatedIDs {
+	extractor := newIDMapper(len(counts))
+
+	for _, d := range counts {
+		extractor.add(d.ID, d.GroupDepartmentID, d.BusinessUnitID, d.LeaderID)
+	}
+
+	return extractor.build()
+}
+
+// ============================================================================
+// Fetch Related Data
+// ============================================================================
+
+type relatedData struct {
+	groupDepts    map[int64]*model.Department
+	businessUnits map[int64]*model.BusinessUnit
+	leaders       map[int64]*model.LineManagerNested
+	subdepts      map[int64][]*model.OrgDepartmentNested
+}
+
+func (r *DepartmentRepository) fetchRelatedData(
+	ctx context.Context,
+	ids relatedIDs,
+) relatedData {
+	return relatedData{
+		groupDepts:    r.fetchGroupDepartments(ctx, ids.groupDeptIDs),
+		businessUnits: r.fetchBusinessUnits(ctx, ids.buIDs),
+		leaders:       r.fetchLeaders(ctx, ids.leaderIDs),
+		subdepts:      r.fetchSubdepartments(ctx, ids.deptIDs),
+	}
+}
+
+func (r *DepartmentRepository) fetchGroupDepartments(
+	ctx context.Context,
+	ids []int64,
+) map[int64]*model.Department {
+	result := make(map[int64]*model.Department)
+	if len(ids) == 0 {
+		return result
+	}
+
+	var entities []entity.DepartmentEntity
+	if err := r.db.WithContext(ctx).
+		Where("id IN ? AND deleted_at IS NULL", ids).
+		Find(&entities).Error; err != nil {
+		return result
+	}
+
+	for i := range entities {
+		result[entities[i].ID] = r.toModel(&entities[i])
+	}
+
+	return result
+}
+
+func (r *DepartmentRepository) fetchBusinessUnits(
+	ctx context.Context,
+	ids []int64,
+) map[int64]*model.BusinessUnit {
+	result := make(map[int64]*model.BusinessUnit)
+	if len(ids) == 0 {
+		return result
+	}
+
+	var entities []entity.BusinessUnitEntity
+	if err := r.db.WithContext(ctx).
+		Where("id IN ?", ids).
+		Find(&entities).Error; err != nil {
+		return result
+	}
+
+	for i := range entities {
+		e := &entities[i]
+		result[e.ID] = &model.BusinessUnit{
+			ID:        e.ID,
+			Name:      e.Name,
+			Shortname: e.Shortname,
+			CompanyID: e.CompanyID,
+			LeaderID:  e.LeaderID,
+			CreatedAt: e.CreatedAt,
+			UpdatedAt: e.UpdatedAt,
+		}
+	}
+
+	return result
+}
+
+func (r *DepartmentRepository) fetchLeaders(
+	ctx context.Context,
+	ids []int64,
+) map[int64]*model.LineManagerNested {
+	result := make(map[int64]*model.LineManagerNested)
+	if len(ids) == 0 {
+		return result
+	}
+
+	var leaders []model.LineManagerNested
+	if err := r.db.WithContext(ctx).
+		Table("starters").
+		Select("id, domain, name, email, job_title").
+		Where("id IN ? AND deleted_at IS NULL", ids).
+		Find(&leaders).Error; err != nil {
+		return result
+	}
+
+	for i := range leaders {
+		result[leaders[i].ID] = &leaders[i]
+	}
+
+	return result
+}
+
+func (r *DepartmentRepository) fetchSubdepartments(
+	ctx context.Context,
+	parentIDs []int64,
+) map[int64][]*model.OrgDepartmentNested {
+	result := make(map[int64][]*model.OrgDepartmentNested)
+	if len(parentIDs) == 0 {
+		return result
+	}
+
+	type subDeptRow struct {
+		ID                int64  `gorm:"column:id"`
+		GroupDepartmentID *int64 `gorm:"column:group_department_id"`
+		FullName          string `gorm:"column:full_name"`
+		Shortname         string `gorm:"column:shortname"`
+	}
+
+	var rows []subDeptRow
+	if err := r.db.WithContext(ctx).
+		Table("departments").
+		Select("id, group_department_id, full_name, shortname").
+		Where("group_department_id IN ? AND deleted_at IS NULL", parentIDs).
+		Find(&rows).Error; err != nil {
+		return result
+	}
+
+	for _, row := range rows {
+		if row.GroupDepartmentID == nil {
+			continue
+		}
+
+		result[*row.GroupDepartmentID] = append(
+			result[*row.GroupDepartmentID],
+			&model.OrgDepartmentNested{
+				ID:        row.ID,
+				FullName:  row.FullName,
+				Shortname: row.Shortname,
+			},
+		)
+	}
+
+	return result
+}
+
+// ============================================================================
+// Build Results
+// ============================================================================
+
+type departmentDetailsBuilder struct {
+	related relatedData
+}
+
+func (b *departmentDetailsBuilder) attachRelations(
+	dept *model.DepartmentWithDetails,
+	groupDeptID, buID, leaderID *int64,
+	deptID int64,
+) {
+	// Attach parent department
+	if groupDeptID != nil {
+		if gd, ok := b.related.groupDepts[*groupDeptID]; ok {
+			dept.ParentDepartment = &model.OrgDepartmentNested{
+				ID:        gd.ID,
+				FullName:  gd.FullName,
+				Shortname: gd.Shortname,
+			}
+		}
+	}
+
+	// Attach business unit
+	if buID != nil {
+		if bu, ok := b.related.businessUnits[*buID]; ok {
+			dept.BusinessUnit = bu
+		}
+	}
+
+	// Attach leader
+	if leaderID != nil {
+		if leader, ok := b.related.leaders[*leaderID]; ok {
+			dept.Leader = leader
+		}
+	}
+
+	// Attach subdepartments
+	if subs, ok := b.related.subdepts[deptID]; ok {
+		dept.Subdepartments = subs
+	}
+}
+
+func (r *DepartmentRepository) buildDepartmentDetailsFromCounts(
+	counts []deptWithCounts,
+	related relatedData,
+) []*model.DepartmentWithDetails {
+	results := make([]*model.DepartmentWithDetails, len(counts))
+	builder := &departmentDetailsBuilder{related: related}
+
+	for i, d := range counts {
+		dept := &model.DepartmentWithDetails{
+			Department: &model.Department{
+				ID:                d.ID,
+				GroupDepartmentID: d.GroupDepartmentID,
+				FullName:          d.FullName,
+				Shortname:         d.Shortname,
+				BusinessUnitID:    d.BusinessUnitID,
+				LeaderID:          d.LeaderID,
+			},
+		}
+
+		builder.attachRelations(
+			dept,
+			d.GroupDepartmentID,
+			d.BusinessUnitID,
+			d.LeaderID,
+			d.ID,
+		)
+
+		results[i] = dept
+	}
+
+	return results
+}
+
+func (r *DepartmentRepository) buildDepartmentDetailsPreserveOrder(
+	originalIDs []int64,
+	viewResults []departmentViewResult,
+	related relatedData,
+) []*model.DepartmentWithDetails {
+	resultMap := make(map[int64]*model.DepartmentWithDetails, len(viewResults))
+	builder := &departmentDetailsBuilder{related: related}
+
+	for _, vr := range viewResults {
+		dept := &model.DepartmentWithDetails{
 			Department: &model.Department{
 				ID:                vr.ID,
 				FullName:          vr.FullName,
@@ -347,91 +531,35 @@ func (r *DepartmentRepository) FindByIDsWithDetails(
 			},
 		}
 
-		if vr.GroupDepartmentID != nil {
-			if gd, ok := groupDeptMapByDeptId[*vr.GroupDepartmentID]; ok {
-				rel.ParentDepartment = &model.OrgDepartmentNested{
-					ID:        gd.ID,
-					FullName:  gd.FullName,
-					Shortname: gd.Shortname,
-				}
-			}
-		}
+		builder.attachRelations(
+			dept,
+			vr.GroupDepartmentID,
+			vr.BusinessUnitID,
+			vr.LeaderID,
+			vr.ID,
+		)
 
-		if vr.BusinessUnitID != nil {
-			if bu, ok := buMapByBuId[*vr.BusinessUnitID]; ok {
-				rel.BusinessUnit = bu
-			}
-		}
-
-		if vr.LeaderID != nil {
-			if lm, ok := leaderMapByLeaderId[*vr.LeaderID]; ok {
-				rel.Leader = lm
-			}
-		}
-
-		if subs, ok := subDeptMap[vr.ID]; ok {
-			rel.Subdepartments = subs
-		}
-
-		resultMap[vr.ID] = rel
+		resultMap[vr.ID] = dept
 	}
 
-	relations := make([]*model.DepartmentWithDetails, 0, len(ids))
-	for _, id := range ids {
-		if rel, ok := resultMap[id]; ok {
-			relations = append(relations, rel)
+	// Preserve original order
+	result := make([]*model.DepartmentWithDetails, 0, len(originalIDs))
+	for _, id := range originalIDs {
+		if dept, ok := resultMap[id]; ok {
+			result = append(result, dept)
 		}
 	}
 
-	return relations, nil
+	return result
 }
 
-func (r *DepartmentRepository) Create(ctx context.Context, department *model.Department) error {
-	_model := &entity.DepartmentEntity{
-		GroupDepartmentID: department.GroupDepartmentID,
-		FullName:          department.FullName,
-		Shortname:         department.Shortname,
-		BusinessUnitID:    department.BusinessUnitID,
-		LeaderID:          department.LeaderID,
-	}
+// ============================================================================
+// Helper Functions
+// ============================================================================
 
-	if err := r.db.WithContext(ctx).Create(_model).Error; err != nil {
-		return err
-	}
-
-	department.ID = _model.ID
-	department.CreatedAt = _model.CreatedAt
-	department.UpdatedAt = _model.UpdatedAt
-
-	return nil
-}
-
-func (r *DepartmentRepository) Update(ctx context.Context, department *model.Department) error {
-	deptEntity := &entity.DepartmentEntity{
-		ID:                department.ID,
-		GroupDepartmentID: department.GroupDepartmentID,
-		FullName:          department.FullName,
-		Shortname:         department.Shortname,
-		BusinessUnitID:    department.BusinessUnitID,
-		LeaderID:          department.LeaderID,
-	}
-
-	if err := r.db.WithContext(ctx).
-		Where("id = ? AND deleted_at IS NULL", department.ID).
-		Updates(deptEntity).Error; err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *DepartmentRepository) Delete(ctx context.Context, id int64) error {
-	return r.db.WithContext(ctx).
-		Exec("CALL sp_delete_department(?)", id).
-		Error
-}
-
-func (r *DepartmentRepository) toModel(dm *entity.DepartmentEntity) *model.Department {
+func (r *DepartmentRepository) toModel(
+	dm *entity.DepartmentEntity,
+) *model.Department {
 	return &model.Department{
 		ID:                dm.ID,
 		GroupDepartmentID: dm.GroupDepartmentID,
@@ -445,13 +573,24 @@ func (r *DepartmentRepository) toModel(dm *entity.DepartmentEntity) *model.Depar
 	}
 }
 
-// Helper function
-func idsToSlice(idMap map[int64]bool) []int64 {
-	ids := make([]int64, len(idMap))
-	i := 0
-	for id := range idMap {
-		ids[i] = id
-		i++
+func (r *DepartmentRepository) entitiesToModels(
+	entities []entity.DepartmentEntity,
+) []*model.Department {
+	result := make([]*model.Department, len(entities))
+	for i := range entities {
+		result[i] = r.toModel(&entities[i])
 	}
-	return ids
+	return result
+}
+
+func mapKeysToSlice(m map[int64]bool) []int64 {
+	if len(m) == 0 {
+		return nil
+	}
+
+	result := make([]int64, 0, len(m))
+	for id := range m {
+		result = append(result, id)
+	}
+	return result
 }

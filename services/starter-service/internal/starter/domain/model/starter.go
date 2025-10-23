@@ -155,11 +155,28 @@ func NewStarterESDocFromStarter(starter *Starter, enriched *EnrichedData) *Start
 		return nil
 	}
 
+	var deptName, buName string
+
+	if enriched != nil {
+		if depIDPtr := starter.DepartmentID(); depIDPtr != nil {
+			depID := *depIDPtr
+
+			// Departments map theo department_id
+			if dep, ok := enriched.Departments[depID]; ok && dep != nil {
+				deptName = dep.Name
+
+				if bu, ok := enriched.BusinessUnits[dep.ID]; ok && bu != nil {
+					buName = bu.Name
+				}
+			}
+		}
+	}
+
 	return &StarterESDoc{
 		id:       starter.ID(),
 		domain:   starter.Domain(),
 		name:     starter.Name(),
-		deptName: enriched.Departments[*starter.DepartmentID()].Name,
-		buName:   enriched.BusinessUnits[*starter.DepartmentID()].Name,
+		deptName: deptName,
+		buName:   buName,
 	}
 }

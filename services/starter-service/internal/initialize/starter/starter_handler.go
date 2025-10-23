@@ -18,7 +18,7 @@ func InitStarter(
 	departmentRepo starterDomainRepo.DepartmentRepository,
 	businessUnitRepo starterDomainRepo.BusinessUnitRepository,
 	esClient *elasticsearch.Client,
-	notifProducer messaging.NotificationProducer,
+	syncProducer messaging.SyncProducer,
 ) (*starterHttp.StarterHandler, starterDomainRepo.StarterSearchRepository, *starterDomainSvc.StarterEnrichmentService) {
 	var (
 		starterSearchRepo    starterDomainRepo.StarterSearchRepository
@@ -44,7 +44,7 @@ func InitStarter(
 				starterSearchService = starterDomainSvc.NewStarterSearchService(
 					starterSearchRepo,
 					starterRepo,
-					notifProducer,
+					syncProducer,
 				)
 
 				log.Println("Checking if index is empty...")
@@ -91,7 +91,7 @@ func InitStarter(
 		}
 	}
 
-	starterHandler := starterHttp.NewStarterHandler(starterAppService)
+	starterHandler := starterHttp.NewStarterHandler(starterAppService, starterEnrichmentService)
 
 	return starterHandler, starterSearchRepo, starterEnrichmentService
 }

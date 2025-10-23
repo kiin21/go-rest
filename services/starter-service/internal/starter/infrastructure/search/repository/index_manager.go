@@ -3,11 +3,10 @@ package repository
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
@@ -20,23 +19,16 @@ type IndexManager struct {
 	mappingData []byte
 }
 
-func NewIndexManager(client *elasticsearch.Client) (*IndexManager, error) {
-	mappingPath := filepath.Join("repository", "mappings", "starters_mapping.json")
-	mappingData, err := os.ReadFile(mappingPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read mapping file: %w", err)
-	}
+//go:embed starters_mapping.json
+var startersMapping []byte
 
-	// Validate JSON
-	var temp map[string]interface{}
-	if err := json.Unmarshal(mappingData, &temp); err != nil {
+func NewIndexManager(client *elasticsearch.Client) (*IndexManager, error) {
+	// validate JSON
+	var tmp map[string]any
+	if err := json.Unmarshal(startersMapping, &tmp); err != nil {
 		return nil, fmt.Errorf("invalid mapping JSON: %w", err)
 	}
-
-	return &IndexManager{
-		client:      client,
-		mappingData: mappingData,
-	}, nil
+	return &IndexManager{client: client, mappingData: startersMapping}, nil
 }
 
 func (im *IndexManager) CreateIndex(ctx context.Context) error {
