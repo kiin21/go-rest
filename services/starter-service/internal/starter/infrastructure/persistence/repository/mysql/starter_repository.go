@@ -111,7 +111,16 @@ func (r *StarterRepository) SearchByKeyword(ctx context.Context, listStarterQuer
 
 func (r *StarterRepository) Create(ctx context.Context, starter *model.Starter) error {
 	starterEntity := r.toEntity(starter)
-	return r.db.WithContext(ctx).Create(starterEntity).Error
+	
+	if err := r.db.WithContext(ctx).Create(starterEntity).Error; err != nil {
+		return err
+	}
+
+	starter.ID = starterEntity.ID
+	starter.CreatedAt = starterEntity.CreatedAt
+	starter.UpdatedAt = starterEntity.UpdatedAt
+
+	return nil
 }
 
 func (r *StarterRepository) Update(ctx context.Context, starter *model.Starter) error {
@@ -147,24 +156,23 @@ func (r *StarterRepository) SoftDelete(ctx context.Context, domain string) (*mod
 	return r.toModel(&starterEntity)
 }
 
-// Helper methods for domain conversion
 func (r *StarterRepository) toModel(e *entity.StarterEntity) (*model.Starter, error) {
 	return model.Rehydrate(e.ID, e.Domain, e.Name, e.Email, e.Mobile, e.WorkPhone, e.JobTitle, e.DepartmentID, e.LineManagerID, e.CreatedAt, e.UpdatedAt)
 }
 
 func (r *StarterRepository) toEntity(starter *model.Starter) *entity.StarterEntity {
 	return &entity.StarterEntity{
-		ID:            starter.ID(),
-		Domain:        starter.Domain(),
-		Name:          starter.Name(),
-		Email:         starter.Email(),
-		Mobile:        starter.Mobile(),
-		WorkPhone:     starter.WorkPhone(),
-		JobTitle:      starter.JobTitle(),
-		DepartmentID:  starter.DepartmentID(),
-		LineManagerID: starter.LineManagerID(),
-		CreatedAt:     starter.CreatedAt(),
-		UpdatedAt:     starter.UpdatedAt(),
+		ID:            starter.ID,
+		Domain:        starter.Domain,
+		Name:          starter.Name,
+		Email:         starter.Email.Value(),
+		Mobile:        starter.Mobile,
+		WorkPhone:     starter.WorkPhone,
+		JobTitle:      starter.JobTitle,
+		DepartmentID:  starter.DepartmentID,
+		LineManagerID: starter.LineManagerID,
+		CreatedAt:     starter.CreatedAt,
+		UpdatedAt:     starter.UpdatedAt,
 	}
 }
 

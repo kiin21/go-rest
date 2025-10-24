@@ -115,7 +115,6 @@ func (r *ElasticsearchStarterRepository) IndexStarter(ctx context.Context, start
 		return fmt.Errorf("error marshaling document: %w", err)
 	}
 
-	// Index document
 	req := esapi.IndexRequest{
 		Index:      starterIndexName,
 		DocumentID: fmt.Sprintf("%d", starter.ID()),
@@ -128,10 +127,7 @@ func (r *ElasticsearchStarterRepository) IndexStarter(ctx context.Context, start
 		return fmt.Errorf("error indexing document: %w", err)
 	}
 	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			// TODO: Handle error like this (search for "if err != nil")
-		}
+		_ = Body.Close()
 	}(res.Body)
 	if res.IsError() {
 		return fmt.Errorf("error indexing document: %s", res.String())
@@ -140,7 +136,39 @@ func (r *ElasticsearchStarterRepository) IndexStarter(ctx context.Context, start
 }
 
 func (r *ElasticsearchStarterRepository) DeleteFromIndex(ctx context.Context, domain string) error {
-	// TODO: implement
+	// Build delete by query request
+	query := map[string]interface{}{
+		"query": map[string]interface{}{
+			"term": map[string]interface{}{
+				"domain.keyword": domain,
+			},
+		},
+	}
+
+	body, err := json.Marshal(query)
+	if err != nil {
+		return fmt.Errorf("error marshaling delete query: %w", err)
+	}
+
+	refresh := true
+	req := esapi.DeleteByQueryRequest{
+		Index:   []string{starterIndexName},
+		Body:    bytes.NewReader(body),
+		Refresh: &refresh,
+	}
+
+	res, err := req.Do(ctx, r.client)
+	if err != nil {
+		return fmt.Errorf("error deleting document: %w", err)
+	}
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(res.Body)
+
+	if res.IsError() && res.StatusCode != 404 {
+		return fmt.Errorf("error deleting document: %s", res.String())
+	}
+
 	return nil
 }
 
@@ -183,10 +211,7 @@ func (r *ElasticsearchStarterRepository) BulkIndex(ctx context.Context, starters
 		return fmt.Errorf("error executing bulk: %w", err)
 	}
 	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			// TODO: Handle error like this (search for "if err != nil")
-		}
+		_ = Body.Close()
 	}(res.Body)
 
 	if res.IsError() {
@@ -207,7 +232,6 @@ func (r *ElasticsearchStarterRepository) toDocument(starter *model.StarterESDoc)
 		starter.BusinessUnitName(),
 	}, " ")
 
-	// TODO: diff between search tokens and full text
 	// Build search tokens (for exact matching)
 	tokens := []string{
 		strconv.FormatInt(starter.ID(), 10),

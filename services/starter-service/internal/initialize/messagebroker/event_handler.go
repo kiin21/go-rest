@@ -47,14 +47,12 @@ func (h *EventHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim s
 
 		log.Printf("Processing event: Type=%s, ID=%s", event.Type, event.ID)
 
-		var payload events.IndexStarterPayload
-		if err := event.UnmarshalPayload(&payload); err != nil {
-			return fmt.Errorf("failed to unmarshal IndexStarterPayload: %w", err)
-		}
+	var payload events.IndexStarterPayload
+	if err := event.UnmarshalPayload(&payload); err != nil {
+		return fmt.Errorf("failed to unmarshal IndexStarterPayload: %w", err)
+	}
 
-		// TODO: switch to handle base on event type
-
-		switch event.Type {
+	switch event.Type {
 		case events.EventTypeStarterInsert, events.EventTypeStarterUpdate:
 			{
 				esDocs, err := h.fetchAndEnrichStarter(ctx, payload.Domain)

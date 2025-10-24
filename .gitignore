@@ -10,13 +10,12 @@ dist/
 
 # Test binary, built with `go test -c`
 *.test
+integration.test
 
 # Output of the go coverage tool
 *.out
-coverage.out
-coverage.html
-coverage-unit.out
-coverage-unit.html
+coverage*.out
+coverage*.html
 *.coverprofile
 
 # Dependency directories
@@ -24,11 +23,12 @@ vendor/
 
 # Go workspace file
 go.work
+go.work.sum
 
-# Environment files
+# Environment files (keep .env_dev for team sharing)
 .env
-.env.local
-.env.test
+.env_local
+.env.production
 .env.*.local
 
 # IDE files
@@ -53,6 +53,14 @@ temp/
 *.sqlite
 *.sqlite3
 
+# Docker volumes
+mysql_data/
+mongo_data/
+es_data/
+
 # Test artifacts
 test/tmp/
 test/logs/
+
+# Documentation artifacts (keep source markdown)
+*.pdf

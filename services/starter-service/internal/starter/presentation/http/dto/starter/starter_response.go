@@ -98,32 +98,30 @@ func FromDomainEnriched(starter *model.Starter, enriched *EnrichedData) *Starter
 	}
 
 	response := &StarterResponse{
-		ID:        starter.ID(),
-		Domain:    starter.Domain(),
-		Name:      starter.Name(),
-		Email:     starter.Email(),
-		Mobile:    starter.Mobile(),
-		WorkPhone: starter.WorkPhone(),
-		JobTitle:  starter.JobTitle(),
-		CreatedAt: starter.CreatedAt(),
-		UpdatedAt: starter.UpdatedAt(),
+		ID:        starter.ID,
+		Domain:    starter.Domain,
+		Name:      starter.Name,
+		Email:     starter.GetEmail(),
+		Mobile:    starter.Mobile,
+		WorkPhone: starter.WorkPhone,
+		JobTitle:  starter.JobTitle,
+		CreatedAt: starter.CreatedAt,
+		UpdatedAt: starter.UpdatedAt,
 	}
 
 	// Map DepartmentName
-	if starter.DepartmentID() != nil && enriched != nil {
-		deptID := *starter.DepartmentID()
+	if starter.DepartmentID != nil && enriched != nil {
+		deptID := *starter.DepartmentID
 		if dept, ok := enriched.Departments[deptID]; ok {
 			response.Department = dept
 
-			// Map BusinessUnit using department ID as key
-			// TODO: clarify if we need to map business unit by each department id
 			if bu, ok := enriched.BusinessUnits[deptID]; ok {
 				response.BusinessUnit = bu
 			}
 		}
 	} // Add LM if exists
-	if starter.LineManagerID() != nil && enriched != nil && enriched.LineManagers != nil {
-		if manager, ok := enriched.LineManagers[*starter.LineManagerID()]; ok {
+	if starter.LineManagerID != nil && enriched != nil && enriched.LineManagers != nil {
+		if manager, ok := enriched.LineManagers[*starter.LineManagerID]; ok {
 			response.LineManager = manager
 		}
 	}

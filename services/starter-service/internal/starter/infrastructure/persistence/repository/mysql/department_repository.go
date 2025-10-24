@@ -18,12 +18,10 @@ func (r *DepartmentRepository) SearchByKeyword(ctx context.Context, keyword stri
 	var entities []entity.DepartmentEntity
 	var total int64
 
-	// Build base query
 	baseQuery := r.db.WithContext(ctx).
 		Model(&entity.DepartmentEntity{}).
 		Where("deleted_at IS NULL")
 
-	// Add keyword search if provided
 	if keyword != "" {
 		searchPattern := "%" + keyword + "%"
 		baseQuery = baseQuery.Where(
@@ -33,12 +31,10 @@ func (r *DepartmentRepository) SearchByKeyword(ctx context.Context, keyword stri
 		)
 	}
 
-	// Get total count
 	if err := baseQuery.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	// Get paginated results
 	if err := baseQuery.
 		Find(&entities).Error; err != nil {
 		return nil, 0, err
@@ -52,7 +48,6 @@ func NewDepartmentRepository(db *gorm.DB) repo.DepartmentRepository {
 }
 
 // ============================================================================
-// Public Methods
 // ============================================================================
 
 func (r *DepartmentRepository) FindByIDs(ctx context.Context, ids []int64) ([]*model.Department, error) {
@@ -84,7 +79,6 @@ func (r *DepartmentRepository) ListWithDetails(
 	relatedIDs := r.extractRelatedIDsFromCounts(viewResults)
 	// Fetch related data
 	relatedData := r.fetchRelatedData(ctx, relatedIDs)
-	// Build results
 	results := r.buildDepartmentDetailsFromCounts(viewResults, relatedData)
 
 	return results, total, nil
@@ -98,16 +92,14 @@ func (r *DepartmentRepository) FindByIDsWithDetails(
 		return []*model.DepartmentWithDetails{}, nil
 	}
 
-	// Fetch main data
 	viewResults, err := r.fetchDepartmentViewResults(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
-	// Extract related IDs
+	
 	relatedIDs := r.extractRelatedIDs(viewResults)
-	// Fetch related data
 	relatedData := r.fetchRelatedData(ctx, relatedIDs)
-	// Build and preserve original order
+	
 	return r.buildDepartmentDetailsPreserveOrder(ids, viewResults, relatedData), nil
 }
 
@@ -120,7 +112,15 @@ func (r *DepartmentRepository) Create(ctx context.Context, department *model.Dep
 		LeaderID:          department.LeaderID,
 	}
 
-	return r.db.WithContext(ctx).Create(newEntity).Error
+	if err := r.db.WithContext(ctx).Create(newEntity).Error; err != nil {
+		return err
+	}
+
+	department.ID = newEntity.ID
+	department.CreatedAt = newEntity.CreatedAt
+	department.UpdatedAt = newEntity.UpdatedAt
+
+	return nil
 }
 
 func (r *DepartmentRepository) Update(ctx context.Context, department *model.Department) error {
@@ -144,7 +144,6 @@ func (r *DepartmentRepository) Delete(ctx context.Context, id int64) error {
 }
 
 // ============================================================================
-// Fetch
 // ============================================================================
 
 type deptWithCounts struct {
@@ -213,7 +212,6 @@ func (r *DepartmentRepository) fetchDepartmentViewResults(ctx context.Context, i
 }
 
 // ============================================================================
-// Extract Related IDs
 // ============================================================================
 
 type relatedIDs struct {
@@ -289,7 +287,6 @@ func (r *DepartmentRepository) extractRelatedIDsFromCounts(
 }
 
 // ============================================================================
-// Fetch Related Data
 // ============================================================================
 
 type relatedData struct {
@@ -435,7 +432,6 @@ func (r *DepartmentRepository) fetchSubdepartments(
 }
 
 // ============================================================================
-// Build Results
 // ============================================================================
 
 type departmentDetailsBuilder struct {
@@ -447,7 +443,6 @@ func (b *departmentDetailsBuilder) attachRelations(
 	groupDeptID, buID, leaderID *int64,
 	deptID int64,
 ) {
-	// Attach parent department
 	if groupDeptID != nil {
 		if gd, ok := b.related.groupDepts[*groupDeptID]; ok {
 			dept.ParentDepartment = &model.OrgDepartmentNested{
@@ -458,21 +453,18 @@ func (b *departmentDetailsBuilder) attachRelations(
 		}
 	}
 
-	// Attach business unit
 	if buID != nil {
 		if bu, ok := b.related.businessUnits[*buID]; ok {
 			dept.BusinessUnit = bu
 		}
 	}
 
-	// Attach leader
 	if leaderID != nil {
 		if leader, ok := b.related.leaders[*leaderID]; ok {
 			dept.Leader = leader
 		}
 	}
 
-	// Attach subdepartments
 	if subs, ok := b.related.subdepts[deptID]; ok {
 		dept.Subdepartments = subs
 	}
@@ -554,7 +546,6 @@ func (r *DepartmentRepository) buildDepartmentDetailsPreserveOrder(
 }
 
 // ============================================================================
-// Helper Functions
 // ============================================================================
 
 func (r *DepartmentRepository) toModel(

@@ -97,7 +97,6 @@ func (r *BusinessUnitRepository) ListWithDetails(ctx context.Context, pg httputi
 	return units, total, nil
 }
 
-// =============== UTILS ===================
 func (r *BusinessUnitRepository) toModelWithDetails(m *entity.BusinessUnitEntity) *model.BusinessUnitWithDetails {
 	bu := &model.BusinessUnitWithDetails{
 		BusinessUnit: r.toModel(m), // Reuse existing converter

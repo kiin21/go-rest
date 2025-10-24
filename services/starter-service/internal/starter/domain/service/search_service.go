@@ -39,9 +39,9 @@ func (s *StarterSearchService) IndexStarter(ctx context.Context, starter *model.
 
 	// Create an event payload
 	payload := events.IndexStarterPayload{
-		StarterID: starter.ID(),
-		Domain:    starter.Domain(),
-		Name:      starter.Name(),
+		StarterID: starter.ID,
+		Domain:    starter.Domain,
+		Name:      starter.Name,
 	}
 
 	event, err := events.NewEvent(events.EventTypeStarterIndex, payload)
@@ -65,9 +65,9 @@ func (s *StarterSearchService) DeleteFromIndex(ctx context.Context, starter *mod
 
 	// Create an event payload
 	payload := events.IndexStarterPayload{
-		StarterID: starter.ID(),
-		Domain:    starter.Domain(),
-		Name:      starter.Name(),
+		StarterID: starter.ID,
+		Domain:    starter.Domain,
+		Name:      starter.Name,
 	}
 
 	event, err := events.NewEvent(events.EventTypeStarterDelete, payload)
@@ -96,7 +96,6 @@ func (s *StarterSearchService) Search(
 
 	starters, err := s.repo.FindByIDs(ctx, starterIds)
 
-	// TODO: refactor this kind of pagination
 	totalPages := int(total) / query.Pagination.GetLimit()
 	if int(total)%(query.Pagination.GetLimit()) > 0 {
 		totalPages++

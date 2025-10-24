@@ -56,8 +56,8 @@ func (s *StarterEnrichmentService) EnrichStarters(ctx context.Context, starters 
 func (s *StarterEnrichmentService) collectDepartmentIDs(starters []*model.Starter) map[int64]bool {
 	departmentIDs := make(map[int64]bool)
 	for _, starter := range starters {
-		if starter.DepartmentID() != nil {
-			departmentIDs[*starter.DepartmentID()] = true
+		if starter.DepartmentID != nil {
+			departmentIDs[*starter.DepartmentID] = true
 		}
 	}
 	return departmentIDs
@@ -66,8 +66,8 @@ func (s *StarterEnrichmentService) collectDepartmentIDs(starters []*model.Starte
 func (s *StarterEnrichmentService) collectLineManagerIDs(starters []*model.Starter) map[int64]bool {
 	lineManagerIDs := make(map[int64]bool)
 	for _, starter := range starters {
-		if starter.LineManagerID() != nil {
-			lineManagerIDs[*starter.LineManagerID()] = true
+		if starter.LineManagerID != nil {
+			lineManagerIDs[*starter.LineManagerID] = true
 		}
 	}
 	return lineManagerIDs
@@ -134,16 +134,15 @@ func (s *StarterEnrichmentService) loadLineManagers(
 	lineManagerIDs map[int64]bool,
 	enriched *model.EnrichedData,
 ) error {
-	// Empty input
 	if len(lineManagerIDs) == 0 {
 		return nil
 	}
+	
 	ids := make([]int64, 0, len(lineManagerIDs))
 	for id := range lineManagerIDs {
 		ids = append(ids, id)
 	}
 
-	// Batch query
 	managers, err := s.starterRepo.FindByIDs(ctx, ids)
 	if err != nil {
 		return fmt.Errorf("failed to load line managers: %w", err)
@@ -152,14 +151,14 @@ func (s *StarterEnrichmentService) loadLineManagers(
 	if enriched.LineManagers == nil {
 		enriched.LineManagers = make(map[int64]*model.LineManagerNested)
 	}
-	// Map managers to enriched data
+	
 	for _, manager := range managers {
-		enriched.LineManagers[manager.ID()] = &model.LineManagerNested{
-			ID:       manager.ID(),
-			Domain:   manager.Domain(),
-			Name:     manager.Name(),
-			Email:    manager.Email(),
-			JobTitle: manager.JobTitle(),
+		enriched.LineManagers[manager.ID] = &model.LineManagerNested{
+			ID:       manager.ID,
+			Domain:   manager.Domain,
+			Name:     manager.Name,
+			Email:    manager.GetEmail(),
+			JobTitle: manager.JobTitle,
 		}
 	}
 

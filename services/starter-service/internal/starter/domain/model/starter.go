@@ -16,18 +16,19 @@ type StarterListFilter struct {
 }
 
 type Starter struct {
-	id            int64
-	domain        string
-	name          string
-	email         valueobject.Email
-	mobile        string
-	workPhone     string
-	jobTitle      string
-	departmentID  *int64
-	lineManagerID *int64
-	createdAt     time.Time
-	updatedAt     time.Time
+	ID            int64
+	Domain        string
+	Name          string
+	Email         valueobject.Email
+	Mobile        string
+	WorkPhone     string
+	JobTitle      string
+	DepartmentID  *int64
+	LineManagerID *int64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
+
 
 func NewStarter(domain, name, email, mobile, workPhone, jobTitle string, departmentID, lineManagerID *int64) (*Starter, error) {
 	if domain == "" {
@@ -50,16 +51,16 @@ func NewStarter(domain, name, email, mobile, workPhone, jobTitle string, departm
 
 	now := time.Now()
 	return &Starter{
-		domain:        domain,
-		name:          name,
-		email:         emailVO,
-		mobile:        mobile,
-		workPhone:     workPhone,
-		jobTitle:      jobTitle,
-		departmentID:  departmentID,
-		lineManagerID: lineManagerID,
-		createdAt:     now,
-		updatedAt:     now,
+		Domain:        domain,
+		Name:          name,
+		Email:         emailVO,
+		Mobile:        mobile,
+		WorkPhone:     workPhone,
+		JobTitle:      jobTitle,
+		DepartmentID:  departmentID,
+		LineManagerID: lineManagerID,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}, nil
 }
 
@@ -82,41 +83,22 @@ func Rehydrate(
 	}
 
 	return &Starter{
-		id:            id,
-		domain:        domain,
-		name:          name,
-		email:         emailVO,
-		mobile:        mobile,
-		workPhone:     workPhone,
-		jobTitle:      jobTitle,
-		departmentID:  departmentID,
-		lineManagerID: lineManagerID,
-		createdAt:     createdAt,
-		updatedAt:     updatedAt,
+		ID:            id,
+		Domain:        domain,
+		Name:          name,
+		Email:         emailVO,
+		Mobile:        mobile,
+		WorkPhone:     workPhone,
+		JobTitle:      jobTitle,
+		DepartmentID:  departmentID,
+		LineManagerID: lineManagerID,
+		CreatedAt:     createdAt,
+		UpdatedAt:     updatedAt,
 	}, nil
 }
 
-func (s *Starter) ID() int64 { return s.id }
-
-func (s *Starter) Domain() string { return s.domain }
-
-func (s *Starter) Name() string { return s.name }
-
-func (s *Starter) Email() string { return s.email.Value() }
-
-func (s *Starter) Mobile() string { return s.mobile }
-
-func (s *Starter) WorkPhone() string { return s.workPhone }
-
-func (s *Starter) JobTitle() string { return s.jobTitle }
-
-func (s *Starter) DepartmentID() *int64 { return s.departmentID }
-
-func (s *Starter) LineManagerID() *int64 { return s.lineManagerID }
-
-func (s *Starter) CreatedAt() time.Time { return s.createdAt }
-
-func (s *Starter) UpdatedAt() time.Time { return s.updatedAt }
+// Email returns the email value as a string
+func (s *Starter) GetEmail() string { return s.Email.Value() }
 
 func (s *Starter) UpdateInfo(name, email, mobile, workPhone, jobTitle string, departmentID, lineManagerID *int64) error {
 	emailVO, err := valueobject.NewEmail(email)
@@ -124,14 +106,14 @@ func (s *Starter) UpdateInfo(name, email, mobile, workPhone, jobTitle string, de
 		return err
 	}
 
-	s.name = name
-	s.email = emailVO
-	s.mobile = mobile
-	s.workPhone = workPhone
-	s.jobTitle = jobTitle
-	s.departmentID = departmentID
-	s.lineManagerID = lineManagerID
-	s.updatedAt = time.Now()
+	s.Name = name
+	s.Email = emailVO
+	s.Mobile = mobile
+	s.WorkPhone = workPhone
+	s.JobTitle = jobTitle
+	s.DepartmentID = departmentID
+	s.LineManagerID = lineManagerID
+	s.UpdatedAt = time.Now()
 
 	return nil
 }
@@ -158,7 +140,7 @@ func NewStarterESDocFromStarter(starter *Starter, enriched *EnrichedData) *Start
 	var deptName, buName string
 
 	if enriched != nil {
-		if depIDPtr := starter.DepartmentID(); depIDPtr != nil {
+		if depIDPtr := starter.DepartmentID; depIDPtr != nil {
 			depID := *depIDPtr
 
 			// Departments map theo department_id
@@ -173,9 +155,9 @@ func NewStarterESDocFromStarter(starter *Starter, enriched *EnrichedData) *Start
 	}
 
 	return &StarterESDoc{
-		id:       starter.ID(),
-		domain:   starter.Domain(),
-		name:     starter.Name(),
+		id:       starter.ID,
+		domain:   starter.Domain,
+		name:     starter.Name,
 		deptName: deptName,
 		buName:   buName,
 	}

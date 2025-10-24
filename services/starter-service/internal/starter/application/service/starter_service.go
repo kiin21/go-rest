@@ -243,37 +243,37 @@ func (s *StarterApplicationService) applyUpdates(
 	starter *model.Starter,
 	command *startercommand.UpdateStarterCommand,
 ) (name, email, mobile, workPhone, jobTitle string, departmentID, lineManagerID *int64) {
-	name = starter.Name()
+	name = starter.Name
 	if command.Name != nil {
 		name = *command.Name
 	}
 
-	email = starter.Email()
+	email = starter.GetEmail()
 	if command.Email != nil {
 		email = *command.Email
 	}
 
-	mobile = starter.Mobile()
+	mobile = starter.Mobile
 	if command.Mobile != nil {
 		mobile = *command.Mobile
 	}
 
-	workPhone = starter.WorkPhone()
+	workPhone = starter.WorkPhone
 	if command.WorkPhone != nil {
 		workPhone = *command.WorkPhone
 	}
 
-	jobTitle = starter.JobTitle()
+	jobTitle = starter.JobTitle
 	if command.JobTitle != nil {
 		jobTitle = *command.JobTitle
 	}
 
-	departmentID = starter.DepartmentID()
+	departmentID = starter.DepartmentID
 	if command.DepartmentID != nil {
 		departmentID = command.DepartmentID
 	}
 
-	lineManagerID = starter.LineManagerID()
+	lineManagerID = starter.LineManagerID
 	if command.LineManagerID != nil {
 		lineManagerID = command.LineManagerID
 	}

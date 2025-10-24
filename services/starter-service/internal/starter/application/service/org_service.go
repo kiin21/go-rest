@@ -178,7 +178,7 @@ func (s *OrganizationApplicationService) AssignLeader(ctx context.Context, cmd *
 			return nil, err
 		}
 
-		leaderID := starter.ID()
+		leaderID := starter.ID
 		oldDept.LeaderID = &leaderID
 	} else {
 		return nil, sharedDomain.ErrInvalidInput
@@ -305,7 +305,6 @@ func (s *OrganizationApplicationService) ListBusinessUnitsWithDetails(ctx contex
 		totalPages++
 	}
 
-	// TODO: refactor this kind of handling pagination into a common utility function
 	var prev, next *string
 	if query.Pagination.GetPage() > 1 {
 		value := strconv.Itoa(query.Pagination.GetPage() - 1)

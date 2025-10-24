@@ -70,10 +70,28 @@ dev-notification: ## Run notification-service locally
 	cd services/notification-service && $(GO_CMD) run ./cmd/main.go
 
 .PHONY: test
-test: ## Run tests for all services and packages
-	$(GO_CMD) test -v ./pkg/...
-	cd services/starter-service && $(GO_CMD) test -v ./...
-	cd services/notification-service && $(GO_CMD) test -v ./...
+test: ## Run unit tests for all services and packages (excluding integration tests)
+	$(GO_CMD) test -short -v ./pkg/...
+	cd services/starter-service && $(GO_CMD) test -short -v ./...
+	cd services/notification-service && $(GO_CMD) test -short -v ./...
+
+.PHONY: test-integration
+test-integration: ## Run integration tests for starter-service (requires Docker)
+	@echo "Running integration tests (requires Docker to be running)..."
+	cd services/starter-service && $(GO_CMD) test -v ./test/integration/...
+
+.PHONY: test-all
+test-all: test test-integration ## Run all tests (unit + integration)
+
+.PHONY: test-coverage
+test-coverage: ## Generate test coverage report for starter-service
+	cd services/starter-service && $(GO_CMD) test -short -coverprofile=coverage.out -covermode=atomic ./...
+	cd services/starter-service && $(GO_CMD) tool cover -html=coverage.out -o coverage.html
+
+.PHONY: test-integration-coverage
+test-integration-coverage: ## Generate integration test coverage report
+	cd services/starter-service && $(GO_CMD) test -coverprofile=coverage_integration.out -covermode=atomic ./test/integration/...
+	cd services/starter-service && $(GO_CMD) tool cover -html=coverage_integration.out -o coverage_integration.html
 
 .PHONY: fmt
 fmt: ## Format all Go code
