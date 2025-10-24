@@ -25,7 +25,7 @@ vendor/
 go.work
 go.work.sum
 
-# Environment files (keep .env_dev for team sharing)
+# Environment files
 .env
 .env_dev
 .env_local
