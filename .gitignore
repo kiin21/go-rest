@@ -27,6 +27,7 @@ go.work.sum
 
 # Environment files (keep .env_dev for team sharing)
 .env
+.env_dev
 .env_local
 .env.production
 .env.*.local

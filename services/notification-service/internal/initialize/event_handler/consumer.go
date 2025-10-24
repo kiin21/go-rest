@@ -33,7 +33,7 @@ func InitGroupConsumer(cfg config.Config, handler *EventHandler) domainMq.Notifi
 	}
 
 	// 3. Create a NotificationConsumer
-	topics := []string{cfg.KafkaTopicNotifications}
+	topics := []string{cfg.KafkaTopicNotifications} // Add more topics if needed
 	consumer := infraMq.NewKafkaNotificationConsumer(consumerGroup, topics, handler)
 
 	// 4. Start consuming

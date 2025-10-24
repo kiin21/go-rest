@@ -15,9 +15,12 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/business-units": {
+        "/organization/business-units": {
             "get": {
                 "description": "Retrieve business units with pagination",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -48,27 +51,30 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/businessunit.BusinessUnitListAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     }
                 }
             }
         },
-        "/business-units/{id}": {
+        "/organization/business-units/{id}": {
             "get": {
                 "description": "Retrieve a business unit with nested details by ID",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -90,33 +96,36 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/businessunit.BusinessUnitDetailAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     }
                 }
             }
         },
-        "/departments": {
+        "/organization/departments": {
             "get": {
                 "description": "Retrieve departments with optional business unit filter and pagination",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -154,19 +163,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/department.DepartmentListAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     }
                 }
@@ -185,7 +194,7 @@ const docTemplate = `{
                 "summary": "Create department",
                 "parameters": [
                     {
-                        "description": "DepartmentName payload",
+                        "description": "Department payload",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -198,27 +207,30 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/department.DepartmentDetailAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     }
                 }
             }
         },
-        "/departments/{id}": {
+        "/organization/departments/{id}": {
             "get": {
                 "description": "Retrieve a department with nested details by ID",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -230,7 +242,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
-                        "description": "DepartmentName ID",
+                        "description": "Department ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -240,31 +252,34 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/department.DepartmentDetailAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     }
                 }
             },
             "delete": {
                 "description": "Delete a department by ID",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -276,7 +291,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
-                        "description": "DepartmentName ID",
+                        "description": "Department ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -286,25 +301,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/department.DepartmentDeleteAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     }
                 }
@@ -325,7 +340,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
-                        "description": "DepartmentName ID",
+                        "description": "Department ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -344,31 +359,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/department.DepartmentDetailAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     }
                 }
             }
         },
-        "/departments/{id}/leader": {
+        "/organization/departments/{id}/leader": {
             "patch": {
                 "description": "Assign or update the leader of a department",
                 "consumes": [
@@ -385,7 +400,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
-                        "description": "DepartmentName ID",
+                        "description": "Department ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -404,316 +419,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/department.DepartmentDetailAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/starters": {
-            "get": {
-                "description": "Retrieve starters with optional search and pagination",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Starters"
-                ],
-                "summary": "List starters",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Keyword search",
-                        "name": "q",
-                        "in": "query"
-                    },
-                    {
-                        "enum": [
-                            "fullname",
-                            "domain",
-                            "dept_name",
-                            "bu_name"
-                        ],
-                        "type": "string",
-                        "description": "Search field",
-                        "name": "search_by",
-                        "in": "query"
-                    },
-                    {
-                        "enum": [
-                            "id",
-                            "domain",
-                            "created_at"
-                        ],
-                        "type": "string",
-                        "default": "id",
-                        "description": "Sort field",
-                        "name": "sort_by",
-                        "in": "query"
-                    },
-                    {
-                        "enum": [
-                            "asc",
-                            "desc"
-                        ],
-                        "type": "string",
-                        "default": "asc",
-                        "description": "Sort order",
-                        "name": "sort_order",
-                        "in": "query"
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Page number",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "maximum": 100,
-                        "minimum": 1,
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Page size",
-                        "name": "limit",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/starter.StarterListAPIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "Create a new starter record",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Starters"
-                ],
-                "summary": "Create starter",
-                "parameters": [
-                    {
-                        "description": "Starter payload",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/starter.CreateStarterRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/starter.StarterAPIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/starters/{domain}": {
-            "get": {
-                "description": "Retrieve a starter by domain",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Starters"
-                ],
-                "summary": "Get starter detail",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Starter domain",
-                        "name": "domain",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/starter.StarterAPIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Soft delete a starter by domain",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Starters"
-                ],
-                "summary": "Delete starter",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Starter domain",
-                        "name": "domain",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/starter.StarterDeleteAPIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
-                        }
-                    }
-                }
-            },
-            "patch": {
-                "description": "Partially update a starter by domain",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Starters"
-                ],
-                "summary": "Update starter",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Starter domain",
-                        "name": "domain",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Update payload",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/starter.UpdateStarterRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/starter.StarterAPIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/shared.GenericAPIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     }
                 }
@@ -721,76 +445,6 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "businessunit.BusinessUnitDetailAPIResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "data": {
-                    "$ref": "#/definitions/businessunit.BusinessUnitDetailResponse"
-                },
-                "error": {},
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "businessunit.BusinessUnitDetailResponse": {
-            "type": "object",
-            "properties": {
-                "company": {
-                    "$ref": "#/definitions/shared.CompanyNested"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "leader": {
-                    "$ref": "#/definitions/shared.LineManagerNested"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "shortname": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "businessunit.BusinessUnitListAPIResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "data": {
-                    "$ref": "#/definitions/businessunit.BusinessUnitListAPIResponseData"
-                },
-                "error": {},
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "businessunit.BusinessUnitListAPIResponseData": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/businessunit.BusinessUnitDetailResponse"
-                    }
-                },
-                "pagination": {
-                    "$ref": "#/definitions/httputil.RespPagination"
-                }
-            }
-        },
         "department.AssignLeaderRequest": {
             "type": "object",
             "required": [
@@ -830,111 +484,6 @@ const docTemplate = `{
                 }
             }
         },
-        "department.DepartmentDeleteAPIResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "data": {
-                    "$ref": "#/definitions/department.DepartmentDeleteResponseData"
-                },
-                "error": {},
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "department.DepartmentDeleteResponseData": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "department.DepartmentDetailAPIResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "data": {
-                    "$ref": "#/definitions/department.DepartmentDetailResponse"
-                },
-                "error": {},
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "department.DepartmentDetailResponse": {
-            "type": "object",
-            "properties": {
-                "business_unit": {
-                    "$ref": "#/definitions/shared.BusinessUnitNested"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "full_name": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "leader": {
-                    "$ref": "#/definitions/shared.LineManagerNested"
-                },
-                "parent_department": {
-                    "$ref": "#/definitions/shared.DepartmentNested"
-                },
-                "shortname": {
-                    "type": "string"
-                },
-                "sub_departments": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/shared.DepartmentNested"
-                    }
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "department.DepartmentListAPIResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "data": {
-                    "$ref": "#/definitions/department.DepartmentListAPIResponseData"
-                },
-                "error": {},
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "department.DepartmentListAPIResponseData": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/department.DepartmentDetailResponse"
-                    }
-                },
-                "pagination": {
-                    "$ref": "#/definitions/httputil.RespPagination"
-                }
-            }
-        },
         "department.LeaderInfo": {
             "type": "object",
             "properties": {
@@ -971,66 +520,7 @@ const docTemplate = `{
                 }
             }
         },
-        "httputil.RespPagination": {
-            "type": "object",
-            "properties": {
-                "limit": {
-                    "type": "integer"
-                },
-                "next": {
-                    "type": "string"
-                },
-                "prev": {
-                    "type": "string"
-                },
-                "total_items": {
-                    "type": "integer"
-                }
-            }
-        },
-        "shared.BusinessUnitNested": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "shortname": {
-                    "type": "string"
-                }
-            }
-        },
-        "shared.CompanyNested": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "shared.DepartmentNested": {
-            "type": "object",
-            "properties": {
-                "group_department": {
-                    "$ref": "#/definitions/shared.GroupDepartmentNested"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "shortname": {
-                    "type": "string"
-                }
-            }
-        },
-        "shared.GenericAPIResponse": {
+        "httputil.APIResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -1040,241 +530,6 @@ const docTemplate = `{
                 "error": {},
                 "message": {
                     "type": "string"
-                }
-            }
-        },
-        "shared.GroupDepartmentNested": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "shortname": {
-                    "type": "string"
-                }
-            }
-        },
-        "shared.LineManagerNested": {
-            "type": "object",
-            "properties": {
-                "domain": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "job_title": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "starter.CreateStarterRequest": {
-            "type": "object",
-            "required": [
-                "department_id",
-                "domain",
-                "email",
-                "job_title",
-                "mobile",
-                "name",
-                "work_phone"
-            ],
-            "properties": {
-                "department_id": {
-                    "type": "integer"
-                },
-                "domain": {
-                    "type": "string",
-                    "maxLength": 25,
-                    "minLength": 3
-                },
-                "email": {
-                    "type": "string",
-                    "maxLength": 100
-                },
-                "job_title": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "minLength": 2
-                },
-                "line_manager_id": {
-                    "type": "integer"
-                },
-                "mobile": {
-                    "type": "string",
-                    "maxLength": 20,
-                    "minLength": 10
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "minLength": 2
-                },
-                "work_phone": {
-                    "type": "string",
-                    "maxLength": 20
-                }
-            }
-        },
-        "starter.StarterAPIResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "data": {
-                    "$ref": "#/definitions/starter.StarterResponse"
-                },
-                "error": {},
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "starter.StarterDeleteAPIResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "data": {
-                    "$ref": "#/definitions/starter.StarterDeleteResponseData"
-                },
-                "error": {},
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "starter.StarterDeleteResponseData": {
-            "type": "object",
-            "properties": {
-                "domain": {
-                    "type": "string"
-                },
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "starter.StarterListAPIResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "data": {
-                    "$ref": "#/definitions/starter.StarterListAPIResponseData"
-                },
-                "error": {},
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "starter.StarterListAPIResponseData": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/starter.StarterResponse"
-                    }
-                },
-                "pagination": {
-                    "$ref": "#/definitions/httputil.RespPagination"
-                }
-            }
-        },
-        "starter.StarterResponse": {
-            "type": "object",
-            "properties": {
-                "business_unit": {
-                    "$ref": "#/definitions/shared.BusinessUnitNested"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "department": {
-                    "$ref": "#/definitions/shared.DepartmentNested"
-                },
-                "domain": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "job_title": {
-                    "type": "string"
-                },
-                "line_manager": {
-                    "$ref": "#/definitions/shared.LineManagerNested"
-                },
-                "mobile": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "work_phone": {
-                    "type": "string"
-                }
-            }
-        },
-        "starter.UpdateStarterRequest": {
-            "type": "object",
-            "required": [
-                "domain"
-            ],
-            "properties": {
-                "department_id": {
-                    "type": "integer"
-                },
-                "domain": {
-                    "type": "string",
-                    "maxLength": 25,
-                    "minLength": 2
-                },
-                "email": {
-                    "type": "string",
-                    "maxLength": 100
-                },
-                "job_title": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "minLength": 2
-                },
-                "line_manager_id": {
-                    "type": "integer"
-                },
-                "mobile": {
-                    "type": "string",
-                    "maxLength": 20,
-                    "minLength": 10
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "minLength": 2
-                },
-                "work_phone": {
-                    "type": "string",
-                    "maxLength": 20
                 }
             }
         }

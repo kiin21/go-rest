@@ -91,6 +91,21 @@ services:
     networks:
       - vng-network
 
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop
+    container_name: kafdrop
+    environment:
+      KAFKA_BROKERCONNECT: vng-messagequeue:9092
+      JVM_OPTS: "-Xms32M -Xmx64M"
+      SERVER_SERVLET_CONTEXTPATH: "/kafdrop"
+    ports:
+      - "9000:9000"
+    networks:
+      - vng-network
+    depends_on:
+      - kafka
+
 volumes:
   mysql_data:
   mongodb_data:

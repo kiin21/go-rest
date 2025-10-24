@@ -20,7 +20,19 @@ func NewOrganizationHandler(
 	}
 }
 
-// ListDepartments GET /api/v1/organization/departments
+// ListDepartments godoc
+// @Summary List departments
+// @Description Retrieve departments with optional business unit filter and pagination
+// @Tags Departments
+// @Accept json
+// @Produce json
+// @Param business_unit_id query int false "Filter by business unit ID" minimum(1)
+// @Param page query int false "Page number" default(1) minimum(1)
+// @Param limit query int false "Page size" default(10) minimum(1) maximum(100)
+// @Success 200 {object} httputil.APIResponse
+// @Failure 400 {object} httputil.APIResponse
+// @Failure 500 {object} httputil.APIResponse
+// @Router /organization/departments [get]
 func (h *OrganizationHandler) ListDepartments(ctx *gin.Context) {
 	httputil.Wrap(h.listDepartments)(ctx)
 }
@@ -46,6 +58,18 @@ func (h *OrganizationHandler) listDepartments(ctx *gin.Context) (res interface{}
 	}, nil
 }
 
+// GetDepartmentDetail godoc
+// @Summary Get department detail
+// @Description Retrieve a department with nested details by ID
+// @Tags Departments
+// @Accept json
+// @Produce json
+// @Param id path int true "Department ID" minimum(1)
+// @Success 200 {object} httputil.APIResponse
+// @Failure 400 {object} httputil.APIResponse
+// @Failure 404 {object} httputil.APIResponse
+// @Failure 500 {object} httputil.APIResponse
+// @Router /organization/departments/{id} [get]
 func (h *OrganizationHandler) GetDepartmentDetail(ctx *gin.Context) {
 	httputil.Wrap(h.getDepartmentDetail)(ctx)
 }
@@ -66,6 +90,18 @@ func (h *OrganizationHandler) getDepartmentDetail(ctx *gin.Context) (res interfa
 	return departmentdto.FromDomainWithDetails(result), nil
 }
 
+// ListBusinessUnits godoc
+// @Summary List business units
+// @Description Retrieve business units with pagination
+// @Tags Business Units
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(1) minimum(1)
+// @Param limit query int false "Page size" default(10) minimum(1) maximum(100)
+// @Success 200 {object} httputil.APIResponse
+// @Failure 400 {object} httputil.APIResponse
+// @Failure 500 {object} httputil.APIResponse
+// @Router /organization/business-units [get]
 func (h *OrganizationHandler) ListBusinessUnits(ctx *gin.Context) {
 	httputil.Wrap(h.listBusinessUnits)(ctx)
 }
@@ -92,6 +128,18 @@ func (h *OrganizationHandler) listBusinessUnits(ctx *gin.Context) (res interface
 	}, nil
 }
 
+// GetBusinessUnit godoc
+// @Summary Get business unit detail
+// @Description Retrieve a business unit with nested details by ID
+// @Tags Business Units
+// @Accept json
+// @Produce json
+// @Param id path int true "Business unit ID" minimum(1)
+// @Success 200 {object} httputil.APIResponse
+// @Failure 400 {object} httputil.APIResponse
+// @Failure 404 {object} httputil.APIResponse
+// @Failure 500 {object} httputil.APIResponse
+// @Router /organization/business-units/{id} [get]
 func (h *OrganizationHandler) GetBusinessUnit(ctx *gin.Context) {
 	httputil.Wrap(h.getBusinessUnit)(ctx)
 }
@@ -112,7 +160,17 @@ func (h *OrganizationHandler) getBusinessUnit(ctx *gin.Context) (res interface{}
 	return budto.FromBusinessUnitWithDetails(unit), nil
 }
 
-// CreateDepartment POST /api/v1/organization/departments
+// CreateDepartment godoc
+// @Summary Create department
+// @Description Create a new department
+// @Tags Departments
+// @Accept json
+// @Produce json
+// @Param request body department.CreateDepartmentRequest true "Department payload"
+// @Success 200 {object} httputil.APIResponse
+// @Failure 400 {object} httputil.APIResponse
+// @Failure 500 {object} httputil.APIResponse
+// @Router /organization/departments [post]
 func (h *OrganizationHandler) CreateDepartment(ctx *gin.Context) {
 	httputil.Wrap(h.createDepartment)(ctx)
 }
@@ -131,6 +189,19 @@ func (h *OrganizationHandler) createDepartment(ctx *gin.Context) (res interface{
 	return departmentdto.FromDomainWithDetails(result), nil
 }
 
+// UpdateDepartment godoc
+// @Summary Update department
+// @Description Update department information by ID
+// @Tags Departments
+// @Accept json
+// @Produce json
+// @Param id path int true "Department ID" minimum(1)
+// @Param request body department.UpdateDepartmentRequest true "Update payload"
+// @Success 200 {object} httputil.APIResponse
+// @Failure 400 {object} httputil.APIResponse
+// @Failure 404 {object} httputil.APIResponse
+// @Failure 500 {object} httputil.APIResponse
+// @Router /organization/departments/{id} [patch]
 func (h *OrganizationHandler) UpdateDepartment(ctx *gin.Context) {
 	httputil.Wrap(h.updateDepartment)(ctx)
 }
@@ -155,6 +226,19 @@ func (h *OrganizationHandler) updateDepartment(ctx *gin.Context) (res interface{
 	return departmentdto.FromDomainWithDetails(result), nil
 }
 
+// AssignLeaderToDepartment godoc
+// @Summary Assign department leader
+// @Description Assign or update the leader of a department
+// @Tags Departments
+// @Accept json
+// @Produce json
+// @Param id path int true "Department ID" minimum(1)
+// @Param request body department.AssignLeaderRequest true "Leader assignment payload"
+// @Success 200 {object} httputil.APIResponse
+// @Failure 400 {object} httputil.APIResponse
+// @Failure 404 {object} httputil.APIResponse
+// @Failure 500 {object} httputil.APIResponse
+// @Router /organization/departments/{id}/leader [patch]
 func (h *OrganizationHandler) AssignLeaderToDepartment(ctx *gin.Context) {
 	httputil.Wrap(h.assignLeaderToDepartment)(ctx)
 }
@@ -179,7 +263,18 @@ func (h *OrganizationHandler) assignLeaderToDepartment(ctx *gin.Context) (res in
 	return departmentdto.FromDomainWithDetails(result), nil
 }
 
-// DeleteDepartment DELETE /api/v1/organization/departments/:id
+// DeleteDepartment godoc
+// @Summary Delete department
+// @Description Delete a department by ID
+// @Tags Departments
+// @Accept json
+// @Produce json
+// @Param id path int true "Department ID" minimum(1)
+// @Success 200 {object} httputil.APIResponse
+// @Failure 400 {object} httputil.APIResponse
+// @Failure 404 {object} httputil.APIResponse
+// @Failure 500 {object} httputil.APIResponse
+// @Router /organization/departments/{id} [delete]
 func (h *OrganizationHandler) DeleteDepartment(ctx *gin.Context) {
 	httputil.Wrap(h.deleteDepartment)(ctx)
 }

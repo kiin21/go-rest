@@ -1,51 +1,5 @@
 basePath: /api/v1
 definitions:
-  businessunit.BusinessUnitDetailAPIResponse:
-    properties:
-      code:
-        type: integer
-      data:
-        $ref: '#/definitions/businessunit.BusinessUnitDetailResponse'
-      error: {}
-      message:
-        type: string
-    type: object
-  businessunit.BusinessUnitDetailResponse:
-    properties:
-      company:
-        $ref: '#/definitions/shared.CompanyNested'
-      created_at:
-        type: string
-      id:
-        type: integer
-      leader:
-        $ref: '#/definitions/shared.LineManagerNested'
-      name:
-        type: string
-      shortname:
-        type: string
-      updated_at:
-        type: string
-    type: object
-  businessunit.BusinessUnitListAPIResponse:
-    properties:
-      code:
-        type: integer
-      data:
-        $ref: '#/definitions/businessunit.BusinessUnitListAPIResponseData'
-      error: {}
-      message:
-        type: string
-    type: object
-  businessunit.BusinessUnitListAPIResponseData:
-    properties:
-      data:
-        items:
-          $ref: '#/definitions/businessunit.BusinessUnitDetailResponse'
-        type: array
-      pagination:
-        $ref: '#/definitions/httputil.RespPagination'
-    type: object
   department.AssignLeaderRequest:
     properties:
       leader:
@@ -73,75 +27,6 @@ definitions:
     - full_name
     - shortname
     type: object
-  department.DepartmentDeleteAPIResponse:
-    properties:
-      code:
-        type: integer
-      data:
-        $ref: '#/definitions/department.DepartmentDeleteResponseData'
-      error: {}
-      message:
-        type: string
-    type: object
-  department.DepartmentDeleteResponseData:
-    properties:
-      id:
-        type: integer
-      message:
-        type: string
-    type: object
-  department.DepartmentDetailAPIResponse:
-    properties:
-      code:
-        type: integer
-      data:
-        $ref: '#/definitions/department.DepartmentDetailResponse'
-      error: {}
-      message:
-        type: string
-    type: object
-  department.DepartmentDetailResponse:
-    properties:
-      business_unit:
-        $ref: '#/definitions/shared.BusinessUnitNested'
-      created_at:
-        type: string
-      full_name:
-        type: string
-      id:
-        type: integer
-      leader:
-        $ref: '#/definitions/shared.LineManagerNested'
-      parent_department:
-        $ref: '#/definitions/shared.DepartmentNested'
-      shortname:
-        type: string
-      sub_departments:
-        items:
-          $ref: '#/definitions/shared.DepartmentNested'
-        type: array
-      updated_at:
-        type: string
-    type: object
-  department.DepartmentListAPIResponse:
-    properties:
-      code:
-        type: integer
-      data:
-        $ref: '#/definitions/department.DepartmentListAPIResponseData'
-      error: {}
-      message:
-        type: string
-    type: object
-  department.DepartmentListAPIResponseData:
-    properties:
-      data:
-        items:
-          $ref: '#/definitions/department.DepartmentDetailResponse'
-        type: array
-      pagination:
-        $ref: '#/definitions/httputil.RespPagination'
-    type: object
   department.LeaderInfo:
     properties:
       domain:
@@ -167,45 +52,7 @@ definitions:
         minLength: 2
         type: string
     type: object
-  httputil.RespPagination:
-    properties:
-      limit:
-        type: integer
-      next:
-        type: string
-      prev:
-        type: string
-      total_items:
-        type: integer
-    type: object
-  shared.BusinessUnitNested:
-    properties:
-      id:
-        type: integer
-      name:
-        type: string
-      shortname:
-        type: string
-    type: object
-  shared.CompanyNested:
-    properties:
-      id:
-        type: integer
-      name:
-        type: string
-    type: object
-  shared.DepartmentNested:
-    properties:
-      group_department:
-        $ref: '#/definitions/shared.GroupDepartmentNested'
-      id:
-        type: integer
-      name:
-        type: string
-      shortname:
-        type: string
-    type: object
-  shared.GenericAPIResponse:
+  httputil.APIResponse:
     properties:
       code:
         type: integer
@@ -214,177 +61,16 @@ definitions:
       message:
         type: string
     type: object
-  shared.GroupDepartmentNested:
-    properties:
-      id:
-        type: integer
-      name:
-        type: string
-      shortname:
-        type: string
-    type: object
-  shared.LineManagerNested:
-    properties:
-      domain:
-        type: string
-      email:
-        type: string
-      id:
-        type: integer
-      job_title:
-        type: string
-      name:
-        type: string
-    type: object
-  starter.CreateStarterRequest:
-    properties:
-      department_id:
-        type: integer
-      domain:
-        maxLength: 25
-        minLength: 3
-        type: string
-      email:
-        maxLength: 100
-        type: string
-      job_title:
-        maxLength: 100
-        minLength: 2
-        type: string
-      line_manager_id:
-        type: integer
-      mobile:
-        maxLength: 20
-        minLength: 10
-        type: string
-      name:
-        maxLength: 255
-        minLength: 2
-        type: string
-      work_phone:
-        maxLength: 20
-        type: string
-    required:
-    - department_id
-    - domain
-    - email
-    - job_title
-    - mobile
-    - name
-    - work_phone
-    type: object
-  starter.StarterAPIResponse:
-    properties:
-      code:
-        type: integer
-      data:
-        $ref: '#/definitions/starter.StarterResponse'
-      error: {}
-      message:
-        type: string
-    type: object
-  starter.StarterDeleteAPIResponse:
-    properties:
-      code:
-        type: integer
-      data:
-        $ref: '#/definitions/starter.StarterDeleteResponseData'
-      error: {}
-      message:
-        type: string
-    type: object
-  starter.StarterDeleteResponseData:
-    properties:
-      domain:
-        type: string
-      message:
-        type: string
-    type: object
-  starter.StarterListAPIResponse:
-    properties:
-      code:
-        type: integer
-      data:
-        $ref: '#/definitions/starter.StarterListAPIResponseData'
-      error: {}
-      message:
-        type: string
-    type: object
-  starter.StarterListAPIResponseData:
-    properties:
-      data:
-        items:
-          $ref: '#/definitions/starter.StarterResponse'
-        type: array
-      pagination:
-        $ref: '#/definitions/httputil.RespPagination'
-    type: object
-  starter.StarterResponse:
-    properties:
-      business_unit:
-        $ref: '#/definitions/shared.BusinessUnitNested'
-      created_at:
-        type: string
-      department:
-        $ref: '#/definitions/shared.DepartmentNested'
-      domain:
-        type: string
-      email:
-        type: string
-      id:
-        type: integer
-      job_title:
-        type: string
-      line_manager:
-        $ref: '#/definitions/shared.LineManagerNested'
-      mobile:
-        type: string
-      name:
-        type: string
-      updated_at:
-        type: string
-      work_phone:
-        type: string
-    type: object
-  starter.UpdateStarterRequest:
-    properties:
-      department_id:
-        type: integer
-      domain:
-        maxLength: 25
-        minLength: 2
-        type: string
-      email:
-        maxLength: 100
-        type: string
-      job_title:
-        maxLength: 100
-        minLength: 2
-        type: string
-      line_manager_id:
-        type: integer
-      mobile:
-        maxLength: 20
-        minLength: 10
-        type: string
-      name:
-        maxLength: 255
-        minLength: 2
-        type: string
-      work_phone:
-        maxLength: 20
-        type: string
-    required:
-    - domain
-    type: object
 info:
   contact: {}
   description: REST APIs for managing starters and organizations.
   title: Starter Service API
   version: "1.0"
 paths:
-  /business-units:
+  /organization/business-units:
     get:
+      consumes:
+      - application/json
       description: Retrieve business units with pagination
       parameters:
       - default: 1
@@ -406,20 +92,22 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/businessunit.BusinessUnitListAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
       summary: List business units
       tags:
       - Business Units
-  /business-units/{id}:
+  /organization/business-units/{id}:
     get:
+      consumes:
+      - application/json
       description: Retrieve a business unit with nested details by ID
       parameters:
       - description: Business unit ID
@@ -434,24 +122,26 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/businessunit.BusinessUnitDetailAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
       summary: Get business unit detail
       tags:
       - Business Units
-  /departments:
+  /organization/departments:
     get:
+      consumes:
+      - application/json
       description: Retrieve departments with optional business unit filter and pagination
       parameters:
       - description: Filter by business unit ID
@@ -478,15 +168,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/department.DepartmentListAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
       summary: List departments
       tags:
       - Departments
@@ -507,20 +197,22 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/department.DepartmentDetailAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
       summary: Create department
       tags:
       - Departments
-  /departments/{id}:
+  /organization/departments/{id}:
     delete:
+      consumes:
+      - application/json
       description: Delete a department by ID
       parameters:
       - description: Department ID
@@ -535,23 +227,25 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/department.DepartmentDeleteAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
       summary: Delete department
       tags:
       - Departments
     get:
+      consumes:
+      - application/json
       description: Retrieve a department with nested details by ID
       parameters:
       - description: Department ID
@@ -566,19 +260,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/department.DepartmentDetailAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
       summary: Get department detail
       tags:
       - Departments
@@ -605,23 +299,23 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/department.DepartmentDetailAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
       summary: Update department
       tags:
       - Departments
-  /departments/{id}/leader:
+  /organization/departments/{id}/leader:
     patch:
       consumes:
       - application/json
@@ -645,217 +339,20 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/department.DepartmentDetailAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
       summary: Assign department leader
       tags:
       - Departments
-  /starters:
-    get:
-      description: Retrieve starters with optional search and pagination
-      parameters:
-      - description: Keyword search
-        in: query
-        name: q
-        type: string
-      - description: Search field
-        enum:
-        - fullname
-        - domain
-        - dept_name
-        - bu_name
-        in: query
-        name: search_by
-        type: string
-      - default: id
-        description: Sort field
-        enum:
-        - id
-        - domain
-        - created_at
-        in: query
-        name: sort_by
-        type: string
-      - default: asc
-        description: Sort order
-        enum:
-        - asc
-        - desc
-        in: query
-        name: sort_order
-        type: string
-      - default: 1
-        description: Page number
-        in: query
-        minimum: 1
-        name: page
-        type: integer
-      - default: 20
-        description: Page size
-        in: query
-        maximum: 100
-        minimum: 1
-        name: limit
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/starter.StarterListAPIResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
-      summary: List starters
-      tags:
-      - Starters
-    post:
-      consumes:
-      - application/json
-      description: Create a new starter record
-      parameters:
-      - description: Starter payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/starter.CreateStarterRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/starter.StarterAPIResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
-        "409":
-          description: Conflict
-          schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
-      summary: Create starter
-      tags:
-      - Starters
-  /starters/{domain}:
-    delete:
-      description: Soft delete a starter by domain
-      parameters:
-      - description: Starter domain
-        in: path
-        name: domain
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/starter.StarterDeleteAPIResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
-      summary: Delete starter
-      tags:
-      - Starters
-    get:
-      description: Retrieve a starter by domain
-      parameters:
-      - description: Starter domain
-        in: path
-        name: domain
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/starter.StarterAPIResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
-      summary: Get starter detail
-      tags:
-      - Starters
-    patch:
-      consumes:
-      - application/json
-      description: Partially update a starter by domain
-      parameters:
-      - description: Starter domain
-        in: path
-        name: domain
-        required: true
-        type: string
-      - description: Update payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/starter.UpdateStarterRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/starter.StarterAPIResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/shared.GenericAPIResponse'
-      summary: Update starter
-      tags:
-      - Starters
 swagger: "2.0"
