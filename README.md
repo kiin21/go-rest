@@ -86,3 +86,14 @@ go tool cover -html=coverage.out
 - `make test-notification` – test notification service only
 - `make test-integration` – run integration tests (requires Docker)
 - `make test-all` – run unit + integration tests
+
+
+## Message
+
+### Screenshots
+
+Changes from Starter service to assign leader role to a user, notification created in MongoDB, message sent to Kafka topic.
+
+![Changes from Starter service](docs/assignLeader.png)
+![List notif from mongo](docs/getNotifs.png)
+![Message in Kafka topic](docs/msg.png)
