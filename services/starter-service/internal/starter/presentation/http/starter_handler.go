@@ -123,7 +123,7 @@ func (sh *StarterHandler) updateStarter(ctx *gin.Context) (res interface{}, err 
 		return nil, err
 	}
 
-	starter, err := sh.starterSvc.UpdateStarter(ctx, req.ToCommand())
+	starter, err := sh.starterSvc.UpdateStarter(ctx, req.ToCommand(uriReq.Domain))
 	if err != nil {
 		return nil, err
 	}

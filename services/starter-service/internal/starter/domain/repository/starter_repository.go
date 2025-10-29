@@ -16,10 +16,11 @@ type StarterRepository interface {
 	SoftDelete(ctx context.Context, domain string) (*model.Starter, error)
 }
 
+// TODO:: remove type alias
 type SearchQueryBuilder func(*starterquery.ListStartersQuery) map[string]interface{}
 
 type StarterSearchRepository interface {
-	Search(ctx context.Context, listStarterQuery *starterquery.ListStartersQuery, buildSearchQuery SearchQueryBuilder) ([]int64, int64, error)
+	Search(ctx context.Context, listStarterQuery *starterquery.ListStartersQuery) ([]int64, int64, error)
 	IndexStarter(ctx context.Context, starter *model.StarterESDoc) error
 	DeleteFromIndex(ctx context.Context, domain string) error
 	BulkIndex(ctx context.Context, starters []*model.StarterESDoc) error

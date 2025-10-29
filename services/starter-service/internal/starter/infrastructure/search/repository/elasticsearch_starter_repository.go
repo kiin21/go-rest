@@ -27,14 +27,14 @@ func NewElasticsearchStarterRepository(client *elasticsearch.Client) repo.Starte
 func (r *ElasticsearchStarterRepository) Search(
 	ctx context.Context,
 	listStarterQuery *starterquery.ListStartersQuery,
-	buildSearchQuery repo.SearchQueryBuilder,
 ) ([]int64, int64, error) {
 
 	// 1) Build query
 	esQuery := buildSearchQuery(listStarterQuery)
 
-	// 2) Chuẩn bị body: nil nếu query = nil; hoặc match_all nếu bạn muốn luôn có object
+	// 2) Body: nil nếu query = nil; hoặc match_all nếu bạn muốn luôn có object
 	var body io.Reader
+
 	if esQuery != nil {
 		var buf bytes.Buffer
 		if err := json.NewEncoder(&buf).Encode(esQuery); err != nil {
@@ -60,19 +60,33 @@ func (r *ElasticsearchStarterRepository) Search(
 	}
 	from := (page - 1) * limit
 
+	// Log query trước khi gọi ES
+	if esQuery != nil {
+		jsonBytes, _ := json.MarshalIndent(esQuery, "", "  ")
+		fmt.Printf("\n========== ES QUERY (BEFORE) ==========\n%s\n", string(jsonBytes))
+		fmt.Printf("Pagination: page=%d, limit=%d, from=%d\n", page, limit, from)
+		fmt.Println("=======================================\n")
+	}
+
 	// 4) Gọi ES
 	res, err := r.client.Search(
 		r.client.Search.WithContext(ctx),
 		r.client.Search.WithIndex(starterIndexName),
-		r.client.Search.WithBody(body), // <- có thể nil
+		r.client.Search.WithBody(body),
 		r.client.Search.WithTrackTotalHits(true),
 		r.client.Search.WithFrom(from),
 		r.client.Search.WithSize(limit),
 	)
+
 	if err != nil {
 		return nil, 0, fmt.Errorf("error executing search: %w", err)
 	}
-	defer res.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			//TODO: handle
+		}
+	}(res.Body)
 
 	if res.IsError() {
 		b, _ := io.ReadAll(res.Body)
@@ -82,7 +96,6 @@ func (r *ElasticsearchStarterRepository) Search(
 	// 5) Parse response có kiểu rõ ràng
 	type hitSrc struct {
 		ID int64 `json:"id"`
-		// thêm các field khác nếu cần
 	}
 	type esResp struct {
 		Hits struct {
@@ -104,6 +117,14 @@ func (r *ElasticsearchStarterRepository) Search(
 	for _, h := range out.Hits.Hits {
 		ids = append(ids, h.Source.ID)
 	}
+
+	// Log kết quả sau khi query xong ES
+	fmt.Printf("\n========== ES QUERY RESULT (AFTER) ==========\n")
+	fmt.Printf("Total hits: %d\n", out.Hits.Total.Value)
+	fmt.Printf("Returned IDs count: %d\n", len(ids))
+	fmt.Printf("IDs: %v\n", ids)
+	fmt.Println("=============================================\n")
+
 	return ids, out.Hits.Total.Value, nil
 }
 
@@ -290,5 +311,113 @@ func extractInt64(m map[string]interface{}, key string) (int64, error) {
 		return int64(v), nil
 	default:
 		return 0, fmt.Errorf("field %s is not a number, got type: %T", key, value)
+	}
+}
+
+func buildSearchQuery(q *starterquery.ListStartersQuery) map[string]interface{} {
+	if q == nil {
+		return nil
+	}
+
+	kw := strings.TrimSpace(q.Keyword)
+	if kw == "" {
+		return nil
+	}
+
+	// Determine search fields
+	field := mapSearchByToFieldName(q.SearchBy)
+	searchFields := getSearchFields(field)
+
+	// Build query
+	must := []any{
+		map[string]any{
+			"multi_match": map[string]any{
+				"query":     kw,
+				"type":      "best_fields",
+				"fuzziness": "AUTO",
+				"operator":  "and",
+				"fields":    searchFields,
+			},
+		},
+	}
+
+	// Build final query structure
+	es := map[string]any{
+		"query": map[string]any{
+			"bool": map[string]any{
+				"must": must,
+			},
+		},
+	}
+
+	// Add sorting if specified
+	if sort := buildSortClause(q.SortBy, q.SortOrder); len(sort) > 0 {
+		es["sort"] = sort
+	}
+
+	return es
+}
+
+// getSearchFields returns the appropriate fields based on the search type
+func getSearchFields(field string) []string {
+	switch field {
+	case "domain":
+		return []string{"domain"}
+	case "name":
+		return []string{"name"}
+	case "business_unit_name":
+		return []string{"business_unit_name"}
+	case "department_name":
+		return []string{"department_name"}
+	default:
+		return []string{"full_text"}
+	}
+}
+
+func mapSearchByToFieldName(searchBy string) string {
+	switch strings.ToLower(strings.TrimSpace(searchBy)) {
+	case "domain":
+		return "domain"
+	case "fullname", "name":
+		return "name"
+	case "dept_name":
+		return "department_name"
+	case "bu_name":
+		return "business_unit_name"
+	default:
+		return "" // Multi-field search
+	}
+}
+
+func buildSortClause(sortBy, sortOrder string) []interface{} {
+	field := mapSortFieldToESField(sortBy)
+	if field == "" {
+		return nil
+	}
+	order := strings.ToLower(strings.TrimSpace(sortOrder))
+	if order != "desc" {
+		order = "asc"
+	}
+	return []interface{}{
+		map[string]interface{}{
+			field: map[string]interface{}{"order": order},
+		},
+	}
+}
+
+func mapSortFieldToESField(sortBy string) string {
+	switch strings.ToLower(strings.TrimSpace(sortBy)) {
+	case "id":
+		return "id"
+	case "domain":
+		return "domain"
+	case "name", "fullname":
+		return "name"
+	case "dept_name":
+		return "department_name"
+	case "bu_name":
+		return "business_unit_name"
+	default:
+		return "id" // Default sort by id
 	}
 }

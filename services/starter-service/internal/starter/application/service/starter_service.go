@@ -47,6 +47,7 @@ func (s *StarterApplicationService) ListStarters(
 	// Use Elasticsearch if keyword exists and search service is available
 	if query.Keyword != "" && s.searchService != nil {
 		log.Println("Using Elasticsearch for search")
+		fmt.Println("QUERY: ", query.SearchBy)
 		return s.searchService.Search(ctx, query)
 	}
 
@@ -99,14 +100,14 @@ func (s *StarterApplicationService) UpdateStarter(
 	ctx context.Context,
 	command *startercommand.UpdateStarterCommand,
 ) (*model.Starter, error) {
-	starter, err := s.starterRepo.FindByDomain(ctx, command.Domain)
+	starter, err := s.starterRepo.FindByDomain(ctx, command.OriginalDomain)
 	if err != nil {
 		return nil, err
 	}
 
-	name, email, mobile, workPhone, jobTitle, departmentID, lineManagerID := s.applyUpdates(starter, command)
+	domain, name, email, mobile, workPhone, jobTitle, departmentID, lineManagerID := s.applyUpdates(starter, command)
 
-	if err := starter.UpdateInfo(name, email, mobile, workPhone, jobTitle, departmentID, lineManagerID); err != nil {
+	if err := starter.UpdateInfo(domain, name, email, mobile, workPhone, jobTitle, departmentID, lineManagerID); err != nil {
 		return nil, err
 	}
 
@@ -242,7 +243,12 @@ func (s *StarterApplicationService) listFromMySQL(
 func (s *StarterApplicationService) applyUpdates(
 	starter *model.Starter,
 	command *startercommand.UpdateStarterCommand,
-) (name, email, mobile, workPhone, jobTitle string, departmentID, lineManagerID *int64) {
+) (domain, name, email, mobile, workPhone, jobTitle string, departmentID, lineManagerID *int64) {
+	domain = starter.Domain
+	if command.Domain != nil {
+		domain = *command.Domain
+	}
+
 	name = starter.Name
 	if command.Name != nil {
 		name = *command.Name

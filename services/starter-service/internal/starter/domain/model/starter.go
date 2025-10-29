@@ -29,7 +29,6 @@ type Starter struct {
 	UpdatedAt     time.Time
 }
 
-
 func NewStarter(domain, name, email, mobile, workPhone, jobTitle string, departmentID, lineManagerID *int64) (*Starter, error) {
 	if domain == "" {
 		return nil, errors.New("domain is required")
@@ -100,12 +99,13 @@ func Rehydrate(
 // Email returns the email value as a string
 func (s *Starter) GetEmail() string { return s.Email.Value() }
 
-func (s *Starter) UpdateInfo(name, email, mobile, workPhone, jobTitle string, departmentID, lineManagerID *int64) error {
+func (s *Starter) UpdateInfo(domain, name, email, mobile, workPhone, jobTitle string, departmentID, lineManagerID *int64) error {
 	emailVO, err := valueobject.NewEmail(email)
 	if err != nil {
 		return err
 	}
 
+	s.Domain = domain
 	s.Name = name
 	s.Email = emailVO
 	s.Mobile = mobile
